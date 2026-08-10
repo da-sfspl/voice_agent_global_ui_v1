@@ -43,7 +43,6 @@ import {
   Workflow,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 type NavItem = {
   label: string
@@ -327,7 +326,7 @@ export function Sidebar({
       </div>
 
       {/* Nav */}
-      <ScrollArea className="flex-1 py-3">
+      <div className="flex-1 min-h-0 overflow-y-auto py-3 scrollbar-thin [scrollbar-width:thin] [scrollbar-color:var(--sidebar-border)_transparent]">
         <nav className={cn('space-y-4', collapsed ? 'px-1.5' : 'px-2')}>
           {navGroups.map((group) => (
             <div key={group.group}>
@@ -344,7 +343,7 @@ export function Sidebar({
             </div>
           ))}
         </nav>
-      </ScrollArea>
+      </div>
 
       {/* Collapse toggle */}
       <div className="shrink-0 border-t border-[var(--sidebar-border)] p-2">

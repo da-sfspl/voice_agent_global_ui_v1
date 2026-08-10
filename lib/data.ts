@@ -406,3 +406,710 @@ Tone: Confident, consultative, respectful of the prospect's time.`,
     modifiedBy: 'James Wilson',
   },
 ]
+
+// ─── Telephony ────────────────────────────────────────────────────────────────
+
+export type CallDirection = 'inbound' | 'outbound'
+export type CallStatus = 'completed' | 'missed' | 'dropped' | 'voicemail' | 'transferred' | 'failed'
+export type LiveCallStatus = 'active' | 'on-hold' | 'transferring'
+
+export type CallRecord = {
+  id: string
+  direction: CallDirection
+  callerNumber: string
+  callerName?: string
+  agentId: string
+  agentName: string
+  trunkId: string
+  startedAt: string
+  duration: string
+  durationSecs: number
+  status: CallStatus
+  outcome: string
+  recordingUrl?: string
+  sentiment: 'positive' | 'neutral' | 'negative'
+  transferredTo?: string
+  campaignId?: string
+}
+
+export const inboundCalls: CallRecord[] = [
+  { id: 'C-20501', direction: 'inbound', callerNumber: '+1 (415) 555-0192', callerName: 'Michael Torres', agentId: 'agt-001', agentName: 'Customer Support Agent', trunkId: 'trunk-001', startedAt: '2026-08-07T09:02:00Z', duration: '4m 32s', durationSecs: 272, status: 'completed', outcome: 'resolved', recordingUrl: '#', sentiment: 'positive' },
+  { id: 'C-20500', direction: 'inbound', callerNumber: '+1 (312) 555-0847', callerName: 'Sandra Kim', agentId: 'agt-003', agentName: 'Appointment Scheduler', trunkId: 'trunk-001', startedAt: '2026-08-07T08:55:00Z', duration: '2m 48s', durationSecs: 168, status: 'completed', outcome: 'resolved', recordingUrl: '#', sentiment: 'positive' },
+  { id: 'C-20499', direction: 'inbound', callerNumber: '+1 (646) 555-0334', agentId: 'agt-001', agentName: 'Customer Support Agent', trunkId: 'trunk-001', startedAt: '2026-08-07T08:48:00Z', duration: '0m 22s', durationSecs: 22, status: 'dropped', outcome: 'dropped', sentiment: 'negative' },
+  { id: 'C-20498', direction: 'inbound', callerNumber: '+1 (213) 555-0721', callerName: 'David Okafor', agentId: 'agt-001', agentName: 'Customer Support Agent', trunkId: 'trunk-002', startedAt: '2026-08-07T08:40:00Z', duration: '7m 15s', durationSecs: 435, status: 'transferred', outcome: 'transferred', transferredTo: 'Human Agent Queue', recordingUrl: '#', sentiment: 'neutral' },
+  { id: 'C-20497', direction: 'inbound', callerNumber: '+1 (512) 555-0563', callerName: 'Priya Sharma', agentId: 'agt-003', agentName: 'Appointment Scheduler', trunkId: 'trunk-001', startedAt: '2026-08-07T08:31:00Z', duration: '3m 10s', durationSecs: 190, status: 'completed', outcome: 'resolved', recordingUrl: '#', sentiment: 'positive' },
+  { id: 'C-20496', direction: 'inbound', callerNumber: '+1 (404) 555-0298', agentId: 'agt-005', agentName: 'IT Help Desk', trunkId: 'trunk-002', startedAt: '2026-08-07T08:22:00Z', duration: '5m 44s', durationSecs: 344, status: 'completed', outcome: 'resolved', recordingUrl: '#', sentiment: 'neutral' },
+  { id: 'C-20495', direction: 'inbound', callerNumber: '+1 (617) 555-0119', callerName: 'James Whitfield', agentId: 'agt-001', agentName: 'Customer Support Agent', trunkId: 'trunk-001', startedAt: '2026-08-07T08:10:00Z', duration: '1m 05s', durationSecs: 65, status: 'missed', outcome: 'missed', sentiment: 'neutral' },
+  { id: 'C-20494', direction: 'inbound', callerNumber: '+1 (702) 555-0882', callerName: 'Aisha Patel', agentId: 'agt-003', agentName: 'Appointment Scheduler', trunkId: 'trunk-001', startedAt: '2026-08-07T07:58:00Z', duration: '4m 20s', durationSecs: 260, status: 'completed', outcome: 'resolved', recordingUrl: '#', sentiment: 'positive' },
+]
+
+export const outboundCalls: CallRecord[] = [
+  { id: 'C-20510', direction: 'outbound', callerNumber: '+1 (415) 555-0201', callerName: 'Robert Chen', agentId: 'agt-002', agentName: 'Sales Outreach Bot', trunkId: 'trunk-003', startedAt: '2026-08-07T09:05:00Z', duration: '7m 12s', durationSecs: 432, status: 'completed', outcome: 'demo-scheduled', recordingUrl: '#', sentiment: 'positive', campaignId: 'cmp-001' },
+  { id: 'C-20509', direction: 'outbound', callerNumber: '+1 (312) 555-0944', callerName: 'Laura Nguyen', agentId: 'agt-002', agentName: 'Sales Outreach Bot', trunkId: 'trunk-003', startedAt: '2026-08-07T08:58:00Z', duration: '0m 45s', durationSecs: 45, status: 'voicemail', outcome: 'voicemail', campaignId: 'cmp-001', sentiment: 'neutral' },
+  { id: 'C-20508', direction: 'outbound', callerNumber: '+1 (646) 555-0771', callerName: 'Marcus Webb', agentId: 'agt-004', agentName: 'Collections & Payment', trunkId: 'trunk-003', startedAt: '2026-08-07T08:50:00Z', duration: '3m 55s', durationSecs: 235, status: 'completed', outcome: 'payment-arranged', recordingUrl: '#', sentiment: 'neutral', campaignId: 'cmp-002' },
+  { id: 'C-20507', direction: 'outbound', callerNumber: '+1 (213) 555-0330', agentId: 'agt-002', agentName: 'Sales Outreach Bot', trunkId: 'trunk-003', startedAt: '2026-08-07T08:42:00Z', duration: '0m 00s', durationSecs: 0, status: 'failed', outcome: 'no-answer', campaignId: 'cmp-001', sentiment: 'neutral' },
+  { id: 'C-20506', direction: 'outbound', callerNumber: '+1 (512) 555-0614', callerName: 'Tanya Brooks', agentId: 'agt-002', agentName: 'Sales Outreach Bot', trunkId: 'trunk-003', startedAt: '2026-08-07T08:35:00Z', duration: '5m 30s', durationSecs: 330, status: 'completed', outcome: 'not-qualified', recordingUrl: '#', sentiment: 'neutral', campaignId: 'cmp-001' },
+  { id: 'C-20505', direction: 'outbound', callerNumber: '+1 (404) 555-0557', callerName: 'Derek Osei', agentId: 'agt-004', agentName: 'Collections & Payment', trunkId: 'trunk-003', startedAt: '2026-08-07T08:25:00Z', duration: '4m 18s', durationSecs: 258, status: 'transferred', outcome: 'transferred', transferredTo: 'Collections Team', recordingUrl: '#', sentiment: 'negative', campaignId: 'cmp-002' },
+  { id: 'C-20504', direction: 'outbound', callerNumber: '+1 (617) 555-0423', callerName: 'Fiona Marsh', agentId: 'agt-002', agentName: 'Sales Outreach Bot', trunkId: 'trunk-003', startedAt: '2026-08-07T08:15:00Z', duration: '6m 02s', durationSecs: 362, status: 'completed', outcome: 'demo-scheduled', recordingUrl: '#', sentiment: 'positive', campaignId: 'cmp-001' },
+]
+
+export type LiveCall = {
+  id: string
+  direction: CallDirection
+  callerNumber: string
+  callerName?: string
+  agentId: string
+  agentName: string
+  trunkId: string
+  startedAt: string
+  durationSecs: number
+  status: LiveCallStatus
+  sentiment: 'positive' | 'neutral' | 'negative'
+  transcript: { speaker: 'agent' | 'caller'; text: string; ts: string }[]
+  sipProvider: string
+  liveKitRoom?: string
+}
+
+export const liveCalls: LiveCall[] = [
+  {
+    id: 'L-001',
+    direction: 'inbound',
+    callerNumber: '+1 (415) 555-0192',
+    callerName: 'Michael Torres',
+    agentId: 'agt-001',
+    agentName: 'Customer Support Agent',
+    trunkId: 'trunk-001',
+    startedAt: '2026-08-07T09:10:00Z',
+    durationSecs: 134,
+    status: 'active',
+    sentiment: 'positive',
+    sipProvider: 'VoBiz AI',
+    liveKitRoom: 'room-L001',
+    transcript: [
+      { speaker: 'agent', text: 'Thank you for calling Acme Corp. My name is Alex. How can I help you today?', ts: '00:00' },
+      { speaker: 'caller', text: 'Hi, I placed an order last week and I haven\'t received a shipping confirmation yet.', ts: '00:05' },
+      { speaker: 'agent', text: 'I\'d be happy to look into that for you. Could I get your order number or the email address on the account?', ts: '00:12' },
+      { speaker: 'caller', text: 'Sure, it\'s order number 88421.', ts: '00:18' },
+      { speaker: 'agent', text: 'Thank you. I can see order 88421 is currently being processed at our fulfillment center. It\'s scheduled to ship today and you\'ll receive a tracking email within 2 hours.', ts: '00:24' },
+    ],
+  },
+  {
+    id: 'L-002',
+    direction: 'outbound',
+    callerNumber: '+1 (312) 555-0847',
+    callerName: 'Sandra Kim',
+    agentId: 'agt-002',
+    agentName: 'Sales Outreach Bot',
+    trunkId: 'trunk-003',
+    startedAt: '2026-08-07T09:08:00Z',
+    durationSecs: 214,
+    status: 'active',
+    sentiment: 'neutral',
+    sipProvider: 'VoBiz AI',
+    liveKitRoom: 'room-L002',
+    transcript: [
+      { speaker: 'agent', text: 'Hi, this is Jordan calling from Acme Corp\'s growth team. Is this Sandra?', ts: '00:00' },
+      { speaker: 'caller', text: 'Yes, this is Sandra. What\'s this about?', ts: '00:06' },
+      { speaker: 'agent', text: 'Great to connect, Sandra. I\'m reaching out because companies in your industry have been using our AI voice platform to reduce support costs by up to 40%. Do you have 2 minutes to hear how?', ts: '00:10' },
+      { speaker: 'caller', text: 'I\'m a bit busy right now, but I\'m curious. Go ahead.', ts: '00:22' },
+    ],
+  },
+  {
+    id: 'L-003',
+    direction: 'inbound',
+    callerNumber: '+1 (646) 555-0334',
+    agentId: 'agt-003',
+    agentName: 'Appointment Scheduler',
+    trunkId: 'trunk-001',
+    startedAt: '2026-08-07T09:12:00Z',
+    durationSecs: 67,
+    status: 'on-hold',
+    sentiment: 'neutral',
+    sipProvider: 'Grandstream SIP',
+    transcript: [
+      { speaker: 'agent', text: 'Thank you for calling Meridian Health scheduling. How can I assist you today?', ts: '00:00' },
+      { speaker: 'caller', text: 'I need to reschedule my appointment with Dr. Patel from Thursday to next Monday.', ts: '00:05' },
+      { speaker: 'agent', text: 'Of course. Let me pull up the available slots for Dr. Patel on Monday. One moment please.', ts: '00:12' },
+    ],
+  },
+]
+
+export type SipTrunk = {
+  id: string
+  name: string
+  direction: 'inbound' | 'outbound' | 'bidirectional'
+  provider: 'VoBiz AI' | 'Grandstream SIP' | 'Twilio' | 'Vonage'
+  host: string
+  port: number
+  transport: 'UDP' | 'TCP' | 'TLS'
+  status: 'connected' | 'degraded' | 'disconnected'
+  activeCalls: number
+  maxConcurrent: number
+  callsToday: number
+  region: string
+  createdAt: string
+}
+
+export const sipTrunks: SipTrunk[] = [
+  { id: 'trunk-001', name: 'VoBiz Inbound — US East', direction: 'inbound', provider: 'VoBiz AI', host: 'sip.vobiz.ai', port: 5060, transport: 'TLS', status: 'connected', activeCalls: 2, maxConcurrent: 50, callsToday: 312, region: 'us-east-1', createdAt: '2024-02-10' },
+  { id: 'trunk-002', name: 'Grandstream Inbound — US West', direction: 'inbound', provider: 'Grandstream SIP', host: '192.168.10.45', port: 5060, transport: 'UDP', status: 'connected', activeCalls: 1, maxConcurrent: 20, callsToday: 88, region: 'us-west-2', createdAt: '2024-04-01' },
+  { id: 'trunk-003', name: 'VoBiz Outbound — US East', direction: 'outbound', provider: 'VoBiz AI', host: 'sip-out.vobiz.ai', port: 5061, transport: 'TLS', status: 'connected', activeCalls: 0, maxConcurrent: 100, callsToday: 547, region: 'us-east-1', createdAt: '2024-02-10' },
+  { id: 'trunk-004', name: 'VoBiz Bidirectional — EU West', direction: 'bidirectional', provider: 'VoBiz AI', host: 'sip-eu.vobiz.ai', port: 5061, transport: 'TLS', status: 'degraded', activeCalls: 0, maxConcurrent: 30, callsToday: 41, region: 'eu-west-1', createdAt: '2024-06-15' },
+]
+
+export type PhoneNumber = {
+  id: string
+  number: string
+  friendlyName: string
+  trunkId: string
+  agentId?: string
+  agentName?: string
+  type: 'local' | 'toll-free' | 'mobile'
+  country: string
+  status: 'active' | 'unassigned' | 'suspended'
+  monthlyCost: number
+  callsToday: number
+}
+
+export const phoneNumbers: PhoneNumber[] = [
+  { id: 'pn-001', number: '+1 (800) 555-0100', friendlyName: 'Main Support Line', trunkId: 'trunk-001', agentId: 'agt-001', agentName: 'Customer Support Agent', type: 'toll-free', country: 'US', status: 'active', monthlyCost: 2.00, callsToday: 198 },
+  { id: 'pn-002', number: '+1 (415) 555-0200', friendlyName: 'Scheduling Line', trunkId: 'trunk-001', agentId: 'agt-003', agentName: 'Appointment Scheduler', type: 'local', country: 'US', status: 'active', monthlyCost: 1.00, callsToday: 114 },
+  { id: 'pn-003', number: '+1 (312) 555-0300', friendlyName: 'IT Help Desk', trunkId: 'trunk-002', agentId: 'agt-005', agentName: 'IT Help Desk', type: 'local', country: 'US', status: 'active', monthlyCost: 1.00, callsToday: 88 },
+  { id: 'pn-004', number: '+1 (646) 555-0400', friendlyName: 'Outbound Sales DID', trunkId: 'trunk-003', agentId: 'agt-002', agentName: 'Sales Outreach Bot', type: 'local', country: 'US', status: 'active', monthlyCost: 1.00, callsToday: 547 },
+  { id: 'pn-005', number: '+44 20 7946 0500', friendlyName: 'EU Support Line', trunkId: 'trunk-004', type: 'local', country: 'GB', status: 'unassigned', monthlyCost: 1.50, callsToday: 0 },
+  { id: 'pn-006', number: '+1 (800) 555-0600', friendlyName: 'Collections Outbound', trunkId: 'trunk-003', agentId: 'agt-004', agentName: 'Collections & Payment', type: 'toll-free', country: 'US', status: 'active', monthlyCost: 2.00, callsToday: 0 },
+]
+
+export type InboundRoute = {
+  id: string
+  name: string
+  phoneNumberId: string
+  phoneNumber: string
+  agentId: string
+  agentName: string
+  schedule: 'always' | 'business-hours' | 'custom'
+  fallback: 'voicemail' | 'queue' | 'transfer'
+  fallbackTarget?: string
+  maxQueueDepth: number
+  priority: number
+  status: 'active' | 'inactive'
+}
+
+export const inboundRoutes: InboundRoute[] = [
+  { id: 'route-001', name: 'Main Support Route', phoneNumberId: 'pn-001', phoneNumber: '+1 (800) 555-0100', agentId: 'agt-001', agentName: 'Customer Support Agent', schedule: 'always', fallback: 'queue', fallbackTarget: 'Support Queue', maxQueueDepth: 10, priority: 1, status: 'active' },
+  { id: 'route-002', name: 'Scheduling Route', phoneNumberId: 'pn-002', phoneNumber: '+1 (415) 555-0200', agentId: 'agt-003', agentName: 'Appointment Scheduler', schedule: 'business-hours', fallback: 'voicemail', maxQueueDepth: 5, priority: 1, status: 'active' },
+  { id: 'route-003', name: 'IT Help Desk Route', phoneNumberId: 'pn-003', phoneNumber: '+1 (312) 555-0300', agentId: 'agt-005', agentName: 'IT Help Desk', schedule: 'business-hours', fallback: 'voicemail', maxQueueDepth: 5, priority: 1, status: 'inactive' },
+]
+
+// ─── Campaigns ────────────────────────────────────────────────────────────────
+
+export type CampaignStatus = 'draft' | 'scheduled' | 'running' | 'paused' | 'completed'
+
+export type RetryPolicy = {
+  maxAttempts: number
+  intervalHours: number
+  onVoicemail: boolean
+  onNoAnswer: boolean
+  onBusy: boolean
+}
+
+export type Campaign = {
+  id: string
+  name: string
+  description: string
+  objective: string
+  agentId: string
+  agentName: string
+  contactListId: string
+  contactListName: string
+  trunkId: string
+  status: CampaignStatus
+  startDate: string
+  endDate: string
+  callingHoursStart: string
+  callingHoursEnd: string
+  timezone: string
+  maxCallsPerDay: number
+  concurrentCallLimit: number
+  retryPolicy: RetryPolicy
+  totalContacts: number
+  pending: number
+  inProgress: number
+  completed: number
+  failed: number
+  contacted: number
+  voicemail: number
+  dnc: number
+  createdAt: string
+  createdBy: string
+  lastRunAt?: string
+  nextRunAt?: string
+}
+
+export const campaigns: Campaign[] = [
+  {
+    id: 'cmp-001',
+    name: 'Q3 Sales Outreach — Enterprise',
+    description: 'Outbound qualification campaign targeting enterprise leads from the Q3 inbound pipeline.',
+    objective: 'Lead Qualification & Demo Scheduling',
+    agentId: 'agt-002',
+    agentName: 'Sales Outreach Bot',
+    contactListId: 'cl-001',
+    contactListName: 'Enterprise Leads Q3',
+    trunkId: 'trunk-003',
+    status: 'running',
+    startDate: '2026-08-01',
+    endDate: '2026-08-31',
+    callingHoursStart: '09:00',
+    callingHoursEnd: '18:00',
+    timezone: 'America/New_York',
+    maxCallsPerDay: 200,
+    concurrentCallLimit: 10,
+    retryPolicy: { maxAttempts: 3, intervalHours: 4, onVoicemail: true, onNoAnswer: true, onBusy: false },
+    totalContacts: 2000,
+    pending: 847,
+    inProgress: 12,
+    completed: 1141,
+    failed: 88,
+    contacted: 712,
+    voicemail: 341,
+    dnc: 10,
+    createdAt: '2026-07-25T10:00:00Z',
+    createdBy: 'James Wilson',
+    lastRunAt: '2026-08-07T09:00:00Z',
+    nextRunAt: '2026-08-07T10:00:00Z',
+  },
+  {
+    id: 'cmp-002',
+    name: 'Collections — August Cycle',
+    description: 'Monthly collections outreach for accounts 30–90 days past due.',
+    objective: 'Payment Recovery',
+    agentId: 'agt-004',
+    agentName: 'Collections & Payment',
+    contactListId: 'cl-002',
+    contactListName: 'Past Due Accounts — Aug',
+    trunkId: 'trunk-003',
+    status: 'running',
+    startDate: '2026-08-05',
+    endDate: '2026-08-20',
+    callingHoursStart: '10:00',
+    callingHoursEnd: '20:00',
+    timezone: 'America/Chicago',
+    maxCallsPerDay: 500,
+    concurrentCallLimit: 20,
+    retryPolicy: { maxAttempts: 2, intervalHours: 6, onVoicemail: false, onNoAnswer: true, onBusy: true },
+    totalContacts: 1850,
+    pending: 1102,
+    inProgress: 8,
+    completed: 740,
+    failed: 62,
+    contacted: 498,
+    voicemail: 180,
+    dnc: 22,
+    createdAt: '2026-08-01T08:00:00Z',
+    createdBy: 'Daniel Park',
+    lastRunAt: '2026-08-07T10:00:00Z',
+    nextRunAt: '2026-08-07T11:00:00Z',
+  },
+  {
+    id: 'cmp-003',
+    name: 'Healthcare Appointment Reminders',
+    description: 'Automated appointment reminder and confirmation calls for Meridian Health patients.',
+    objective: 'Appointment Confirmation & Rescheduling',
+    agentId: 'agt-003',
+    agentName: 'Appointment Scheduler',
+    contactListId: 'cl-003',
+    contactListName: 'Upcoming Appointments — Aug',
+    trunkId: 'trunk-001',
+    status: 'scheduled',
+    startDate: '2026-08-10',
+    endDate: '2026-08-31',
+    callingHoursStart: '08:00',
+    callingHoursEnd: '17:00',
+    timezone: 'America/New_York',
+    maxCallsPerDay: 300,
+    concurrentCallLimit: 15,
+    retryPolicy: { maxAttempts: 2, intervalHours: 24, onVoicemail: true, onNoAnswer: true, onBusy: false },
+    totalContacts: 1200,
+    pending: 1200,
+    inProgress: 0,
+    completed: 0,
+    failed: 0,
+    contacted: 0,
+    voicemail: 0,
+    dnc: 0,
+    createdAt: '2026-08-06T14:00:00Z',
+    createdBy: 'Priya Nair',
+    nextRunAt: '2026-08-10T08:00:00Z',
+  },
+  {
+    id: 'cmp-004',
+    name: 'NPS Survey — Post-Purchase',
+    description: 'Post-purchase NPS and CSAT survey campaign for customers who completed orders in July.',
+    objective: 'Customer Satisfaction Survey',
+    agentId: 'agt-001',
+    agentName: 'Customer Support Agent',
+    contactListId: 'cl-004',
+    contactListName: 'July Purchasers',
+    trunkId: 'trunk-003',
+    status: 'paused',
+    startDate: '2026-07-28',
+    endDate: '2026-08-15',
+    callingHoursStart: '10:00',
+    callingHoursEnd: '19:00',
+    timezone: 'America/Los_Angeles',
+    maxCallsPerDay: 150,
+    concurrentCallLimit: 8,
+    retryPolicy: { maxAttempts: 1, intervalHours: 48, onVoicemail: false, onNoAnswer: false, onBusy: false },
+    totalContacts: 880,
+    pending: 312,
+    inProgress: 0,
+    completed: 568,
+    failed: 44,
+    contacted: 490,
+    voicemail: 34,
+    dnc: 6,
+    createdAt: '2026-07-26T09:00:00Z',
+    createdBy: 'Sara Miller',
+    lastRunAt: '2026-08-05T10:00:00Z',
+  },
+  {
+    id: 'cmp-005',
+    name: 'IT Onboarding — New Hires Aug',
+    description: 'Automated IT onboarding call for new hires joining in August.',
+    objective: 'Employee Onboarding',
+    agentId: 'agt-005',
+    agentName: 'IT Help Desk',
+    contactListId: 'cl-005',
+    contactListName: 'New Hires — August',
+    trunkId: 'trunk-002',
+    status: 'draft',
+    startDate: '2026-08-12',
+    endDate: '2026-08-14',
+    callingHoursStart: '09:00',
+    callingHoursEnd: '17:00',
+    timezone: 'America/New_York',
+    maxCallsPerDay: 50,
+    concurrentCallLimit: 5,
+    retryPolicy: { maxAttempts: 1, intervalHours: 2, onVoicemail: true, onNoAnswer: true, onBusy: false },
+    totalContacts: 42,
+    pending: 42,
+    inProgress: 0,
+    completed: 0,
+    failed: 0,
+    contacted: 0,
+    voicemail: 0,
+    dnc: 0,
+    createdAt: '2026-08-07T11:00:00Z',
+    createdBy: 'Marcus Lee',
+  },
+  {
+    id: 'cmp-006',
+    name: 'Q2 Win-Back Campaign',
+    description: 'Re-engagement campaign for churned customers from Q2 with special retention offers.',
+    objective: 'Customer Win-Back',
+    agentId: 'agt-002',
+    agentName: 'Sales Outreach Bot',
+    contactListId: 'cl-006',
+    contactListName: 'Churned Customers Q2',
+    trunkId: 'trunk-003',
+    status: 'completed',
+    startDate: '2026-07-01',
+    endDate: '2026-07-31',
+    callingHoursStart: '09:00',
+    callingHoursEnd: '18:00',
+    timezone: 'America/New_York',
+    maxCallsPerDay: 100,
+    concurrentCallLimit: 5,
+    retryPolicy: { maxAttempts: 2, intervalHours: 72, onVoicemail: true, onNoAnswer: true, onBusy: false },
+    totalContacts: 640,
+    pending: 0,
+    inProgress: 0,
+    completed: 640,
+    failed: 58,
+    contacted: 421,
+    voicemail: 161,
+    dnc: 8,
+    createdAt: '2026-06-28T10:00:00Z',
+    createdBy: 'James Wilson',
+    lastRunAt: '2026-07-31T18:00:00Z',
+  },
+]
+
+// ─── Contacts ─────────────────────────────────────────────────────────────────
+
+export type ContactStatus = 'active' | 'dnc' | 'opted-out' | 'invalid'
+export type ContactCallOutcome = 'contacted' | 'voicemail' | 'no-answer' | 'busy' | 'failed' | 'pending' | 'dnc'
+
+export type Contact = {
+  id: string
+  firstName: string
+  lastName: string
+  phone: string
+  email: string
+  company?: string
+  jobTitle?: string
+  contactListIds: string[]
+  campaignIds: string[]
+  status: ContactStatus
+  tags: string[]
+  lastOutcome: ContactCallOutcome
+  lastContactedAt?: string
+  totalCalls: number
+  attributes: Record<string, string>
+  createdAt: string
+}
+
+export const contacts: Contact[] = [
+  {
+    id: 'con-001', firstName: 'Robert', lastName: 'Chen', phone: '+1 (415) 555-0201', email: 'robert.chen@techflow.io',
+    company: 'TechFlow Solutions', jobTitle: 'VP of Engineering',
+    contactListIds: ['cl-001'], campaignIds: ['cmp-001'],
+    status: 'active', tags: ['enterprise', 'q3-lead', 'warm'],
+    lastOutcome: 'contacted', lastContactedAt: '2026-08-07T09:05:00Z', totalCalls: 2,
+    attributes: { accountValue: '$48,000', industry: 'SaaS', employees: '200–500', region: 'US West' },
+    createdAt: '2026-07-15',
+  },
+  {
+    id: 'con-002', firstName: 'Laura', lastName: 'Nguyen', phone: '+1 (312) 555-0944', email: 'laura.nguyen@retaildirect.com',
+    company: 'Retail Direct', jobTitle: 'Head of Operations',
+    contactListIds: ['cl-001'], campaignIds: ['cmp-001'],
+    status: 'active', tags: ['enterprise', 'q3-lead'],
+    lastOutcome: 'voicemail', lastContactedAt: '2026-08-07T08:58:00Z', totalCalls: 3,
+    attributes: { accountValue: '$22,000', industry: 'Retail', employees: '50–200', region: 'US Midwest' },
+    createdAt: '2026-07-16',
+  },
+  {
+    id: 'con-003', firstName: 'Marcus', lastName: 'Webb', phone: '+1 (646) 555-0771', email: 'marcus.webb@finedge.capital',
+    company: 'FinEdge Capital', jobTitle: 'CFO',
+    contactListIds: ['cl-002'], campaignIds: ['cmp-002'],
+    status: 'active', tags: ['past-due', '60-day'],
+    lastOutcome: 'contacted', lastContactedAt: '2026-08-07T08:50:00Z', totalCalls: 1,
+    attributes: { accountBalance: '$4,200', daysPastDue: '62', planType: 'Professional', region: 'US East' },
+    createdAt: '2026-06-01',
+  },
+  {
+    id: 'con-004', firstName: 'Tanya', lastName: 'Brooks', phone: '+1 (512) 555-0614', email: 'tanya.brooks@acme.com',
+    company: 'Acme Corp', jobTitle: 'Director of IT',
+    contactListIds: ['cl-001'], campaignIds: ['cmp-001'],
+    status: 'active', tags: ['enterprise', 'q3-lead', 'decision-maker'],
+    lastOutcome: 'contacted', lastContactedAt: '2026-08-07T08:35:00Z', totalCalls: 2,
+    attributes: { accountValue: '$95,000', industry: 'Enterprise Tech', employees: '1000+', region: 'US South' },
+    createdAt: '2026-07-10',
+  },
+  {
+    id: 'con-005', firstName: 'Derek', lastName: 'Osei', phone: '+1 (404) 555-0557', email: 'derek.osei@meridianhealth.org',
+    company: 'Meridian Health', jobTitle: 'Billing Manager',
+    contactListIds: ['cl-002'], campaignIds: ['cmp-002'],
+    status: 'active', tags: ['past-due', '30-day'],
+    lastOutcome: 'no-answer', lastContactedAt: '2026-08-06T14:00:00Z', totalCalls: 2,
+    attributes: { accountBalance: '$1,800', daysPastDue: '34', planType: 'Enterprise', region: 'US South' },
+    createdAt: '2026-06-15',
+  },
+  {
+    id: 'con-006', firstName: 'Fiona', lastName: 'Marsh', phone: '+1 (617) 555-0423', email: 'fiona.marsh@nexus.io',
+    company: 'Nexus Solutions', jobTitle: 'CTO',
+    contactListIds: ['cl-001'], campaignIds: ['cmp-001'],
+    status: 'active', tags: ['enterprise', 'q3-lead', 'warm', 'demo-scheduled'],
+    lastOutcome: 'contacted', lastContactedAt: '2026-08-07T08:15:00Z', totalCalls: 1,
+    attributes: { accountValue: '$120,000', industry: 'Cloud Infrastructure', employees: '500–1000', region: 'US East' },
+    createdAt: '2026-07-20',
+  },
+  {
+    id: 'con-007', firstName: 'Sandra', lastName: 'Kim', phone: '+1 (213) 555-0330', email: 'sandra.kim@globaltech.com',
+    company: 'GlobalTech Inc', jobTitle: 'Procurement Lead',
+    contactListIds: ['cl-001'], campaignIds: ['cmp-001'],
+    status: 'active', tags: ['enterprise', 'q3-lead'],
+    lastOutcome: 'no-answer', lastContactedAt: '2026-08-06T11:00:00Z', totalCalls: 3,
+    attributes: { accountValue: '$35,000', industry: 'Manufacturing', employees: '200–500', region: 'US West' },
+    createdAt: '2026-07-18',
+  },
+  {
+    id: 'con-008', firstName: 'James', lastName: 'Whitfield', phone: '+1 (702) 555-0882', email: 'j.whitfield@acme.com',
+    company: 'Acme Corp', jobTitle: 'IT Manager',
+    contactListIds: ['cl-005'], campaignIds: ['cmp-005'],
+    status: 'active', tags: ['new-hire', 'it-onboarding'],
+    lastOutcome: 'pending', totalCalls: 0,
+    attributes: { department: 'Engineering', startDate: '2026-08-12', location: 'New York' },
+    createdAt: '2026-08-05',
+  },
+  {
+    id: 'con-009', firstName: 'Aisha', lastName: 'Patel', phone: '+1 (305) 555-0119', email: 'aisha.patel@churned.com',
+    company: 'Patel Consulting', jobTitle: 'CEO',
+    contactListIds: ['cl-006'], campaignIds: ['cmp-006'],
+    status: 'active', tags: ['churned', 'q2', 'win-back'],
+    lastOutcome: 'contacted', lastContactedAt: '2026-07-22T10:00:00Z', totalCalls: 2,
+    attributes: { churnReason: 'Price', lastPlan: 'Professional', churnDate: '2026-06-30', ltv: '$18,400' },
+    createdAt: '2024-03-01',
+  },
+  {
+    id: 'con-010', firstName: 'Carlos', lastName: 'Rivera', phone: '+1 (786) 555-0644', email: 'carlos.r@blocked.com',
+    company: 'Rivera Logistics', jobTitle: 'Operations Director',
+    contactListIds: ['cl-001'], campaignIds: [],
+    status: 'dnc', tags: ['dnc'],
+    lastOutcome: 'dnc', totalCalls: 1,
+    attributes: { dncReason: 'Customer Request', dncDate: '2026-07-01' },
+    createdAt: '2026-05-10',
+  },
+]
+
+export type ContactList = {
+  id: string
+  name: string
+  description: string
+  totalContacts: number
+  activeContacts: number
+  dncContacts: number
+  campaignIds: string[]
+  createdAt: string
+  createdBy: string
+  lastUpdated: string
+}
+
+export const contactLists: ContactList[] = [
+  { id: 'cl-001', name: 'Enterprise Leads Q3', description: 'Qualified enterprise leads from Q3 inbound pipeline and trade shows.', totalContacts: 2000, activeContacts: 1960, dncContacts: 10, campaignIds: ['cmp-001'], createdAt: '2026-07-20', createdBy: 'James Wilson', lastUpdated: '2026-08-01' },
+  { id: 'cl-002', name: 'Past Due Accounts — Aug', description: 'Accounts 30–90 days past due as of August 1st billing cycle.', totalContacts: 1850, activeContacts: 1810, dncContacts: 22, campaignIds: ['cmp-002'], createdAt: '2026-08-01', createdBy: 'Daniel Park', lastUpdated: '2026-08-05' },
+  { id: 'cl-003', name: 'Upcoming Appointments — Aug', description: 'Meridian Health patients with appointments scheduled in August.', totalContacts: 1200, activeContacts: 1200, dncContacts: 0, campaignIds: ['cmp-003'], createdAt: '2026-08-06', createdBy: 'Priya Nair', lastUpdated: '2026-08-06' },
+  { id: 'cl-004', name: 'July Purchasers', description: 'Customers who completed purchases in July for post-purchase NPS survey.', totalContacts: 880, activeContacts: 868, dncContacts: 6, campaignIds: ['cmp-004'], createdAt: '2026-07-26', createdBy: 'Sara Miller', lastUpdated: '2026-07-28' },
+  { id: 'cl-005', name: 'New Hires — August', description: 'Employees starting in August for IT onboarding calls.', totalContacts: 42, activeContacts: 42, dncContacts: 0, campaignIds: ['cmp-005'], createdAt: '2026-08-07', createdBy: 'Marcus Lee', lastUpdated: '2026-08-07' },
+  { id: 'cl-006', name: 'Churned Customers Q2', description: 'Customers who churned in Q2 for win-back outreach.', totalContacts: 640, activeContacts: 624, dncContacts: 8, campaignIds: ['cmp-006'], createdAt: '2026-06-28', createdBy: 'James Wilson', lastUpdated: '2026-07-01' },
+]
+
+// ─── Schedules ────────────────────────────────────────────────────────────────
+
+export type ScheduleStatus = 'active' | 'paused' | 'completed' | 'scheduled'
+
+export type BlackoutPeriod = {
+  id: string
+  label: string
+  startDate: string
+  endDate: string
+  reason: string
+}
+
+export type CampaignSchedule = {
+  id: string
+  campaignId: string
+  campaignName: string
+  agentName: string
+  status: ScheduleStatus
+  timezone: string
+  startDate: string
+  endDate: string
+  callingDays: string[]
+  callingHoursStart: string
+  callingHoursEnd: string
+  maxCallsPerDay: number
+  concurrentCallLimit: number
+  blackoutPeriods: BlackoutPeriod[]
+  nextExecution?: string
+  lastExecution?: string
+  totalExecutions: number
+  callsDispatchedToday: number
+}
+
+export const campaignSchedules: CampaignSchedule[] = [
+  {
+    id: 'sch-001',
+    campaignId: 'cmp-001',
+    campaignName: 'Q3 Sales Outreach — Enterprise',
+    agentName: 'Sales Outreach Bot',
+    status: 'active',
+    timezone: 'America/New_York',
+    startDate: '2026-08-01',
+    endDate: '2026-08-31',
+    callingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    callingHoursStart: '09:00',
+    callingHoursEnd: '18:00',
+    maxCallsPerDay: 200,
+    concurrentCallLimit: 10,
+    blackoutPeriods: [
+      { id: 'bp-001', label: 'Company All-Hands', startDate: '2026-08-14', endDate: '2026-08-14', reason: 'Internal event — no outbound calls' },
+    ],
+    nextExecution: '2026-08-07T10:00:00Z',
+    lastExecution: '2026-08-07T09:00:00Z',
+    totalExecutions: 47,
+    callsDispatchedToday: 87,
+  },
+  {
+    id: 'sch-002',
+    campaignId: 'cmp-002',
+    campaignName: 'Collections — August Cycle',
+    agentName: 'Collections & Payment',
+    status: 'active',
+    timezone: 'America/Chicago',
+    startDate: '2026-08-05',
+    endDate: '2026-08-20',
+    callingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    callingHoursStart: '10:00',
+    callingHoursEnd: '20:00',
+    maxCallsPerDay: 500,
+    concurrentCallLimit: 20,
+    blackoutPeriods: [],
+    nextExecution: '2026-08-07T11:00:00Z',
+    lastExecution: '2026-08-07T10:00:00Z',
+    totalExecutions: 18,
+    callsDispatchedToday: 142,
+  },
+  {
+    id: 'sch-003',
+    campaignId: 'cmp-003',
+    campaignName: 'Healthcare Appointment Reminders',
+    agentName: 'Appointment Scheduler',
+    status: 'scheduled',
+    timezone: 'America/New_York',
+    startDate: '2026-08-10',
+    endDate: '2026-08-31',
+    callingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    callingHoursStart: '08:00',
+    callingHoursEnd: '17:00',
+    maxCallsPerDay: 300,
+    concurrentCallLimit: 15,
+    blackoutPeriods: [
+      { id: 'bp-002', label: 'System Maintenance', startDate: '2026-08-17', endDate: '2026-08-17', reason: 'Scheduled infrastructure maintenance window' },
+    ],
+    nextExecution: '2026-08-10T08:00:00Z',
+    totalExecutions: 0,
+    callsDispatchedToday: 0,
+  },
+  {
+    id: 'sch-004',
+    campaignId: 'cmp-004',
+    campaignName: 'NPS Survey — Post-Purchase',
+    agentName: 'Customer Support Agent',
+    status: 'paused',
+    timezone: 'America/Los_Angeles',
+    startDate: '2026-07-28',
+    endDate: '2026-08-15',
+    callingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    callingHoursStart: '10:00',
+    callingHoursEnd: '19:00',
+    maxCallsPerDay: 150,
+    concurrentCallLimit: 8,
+    blackoutPeriods: [],
+    lastExecution: '2026-08-05T10:00:00Z',
+    totalExecutions: 31,
+    callsDispatchedToday: 0,
+  },
+  {
+    id: 'sch-005',
+    campaignId: 'cmp-006',
+    campaignName: 'Q2 Win-Back Campaign',
+    agentName: 'Sales Outreach Bot',
+    status: 'completed',
+    timezone: 'America/New_York',
+    startDate: '2026-07-01',
+    endDate: '2026-07-31',
+    callingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    callingHoursStart: '09:00',
+    callingHoursEnd: '18:00',
+    maxCallsPerDay: 100,
+    concurrentCallLimit: 5,
+    blackoutPeriods: [
+      { id: 'bp-003', label: 'Independence Day', startDate: '2026-07-04', endDate: '2026-07-04', reason: 'US Federal Holiday' },
+    ],
+    lastExecution: '2026-07-31T18:00:00Z',
+    totalExecutions: 130,
+    callsDispatchedToday: 0,
+  },
+]

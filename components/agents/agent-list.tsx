@@ -75,10 +75,10 @@ export function AgentList() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" render={<Link href="/agents/templates" />}>
+          <Button size="sm" variant="outline" render={<Link href="/agents/templates" />}nativeButton={false}>
             Browse Templates
           </Button>
-          <Button size="sm" render={<Link href="/agents/new" />} className="gap-1.5">
+          <Button size="sm" render={<Link href="/agents/new" />}nativeButton={false} className="gap-1.5">
             <Plus className="h-4 w-4" />
             New Agent
           </Button>
@@ -138,7 +138,7 @@ export function AgentList() {
           <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card py-16">
             <Bot className="h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">No agents match your criteria.</p>
-            <Button size="sm" variant="outline" render={<Link href="/agents/new" />}>
+            <Button size="sm" variant="outline" render={<Link href="/agents/new" />}nativeButton={false}>
               Create Agent
             </Button>
           </div>
@@ -205,7 +205,7 @@ function AgentCard({ agent }: { agent: Agent }) {
 
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0">
-          <Button size="sm" variant="ghost" render={<Link href={`/agents/${agent.id}/config`} />} className="h-8 px-2.5">
+          <Button size="sm" variant="ghost" render={<Link href={`/agents/${agent.id}/config`} />} nativeButton={false} className="h-8 px-2.5">
             <Settings2 className="h-4 w-4" />
           </Button>
           <DropdownMenu>

@@ -237,7 +237,7 @@ export function AgentDetail({ agent }: { agent: Agent }) {
                     <span>{kb.documents} documents</span>
                     <span>{kb.urls} URLs</span>
                     <span>{(kb.tokens / 1000).toFixed(0)}k tokens</span>
-                    <Badge variant="outline" className="border-[var(--status-active)]/30 text-[var(--status-active)]">{kb.status}</Badge>
+                    <Badge variant="outline" className="border-(--status-active)/30 text-(--status-active)]">{kb.status}</Badge>
                     <Button size="sm" variant="outline" className="text-xs h-7 text-destructive hover:text-destructive">Detach</Button>
                   </div>
                 </div>

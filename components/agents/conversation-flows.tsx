@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import {
   Workflow,
   Plus,
@@ -23,6 +25,10 @@ import {
   Edit,
   Trash2,
 } from 'lucide-react'
+
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
+} from '@/components/ui/dialog'
 
 type NodeType = 'trigger' | 'message' | 'condition' | 'action' | 'end'
 
@@ -76,6 +82,56 @@ export function ConversationFlows() {
   const [agentId, setAgentId] = useState('agt-001')
   const [selected, setSelected] = useState<FlowNode | null>(null)
 
+  const [nodes, setNodes] = useState<FlowNode[]>(flowNodes)
+
+    //  State for the Add Node Dialog
+  const [showAddNodeDialog, setShowAddNodeDialog] = useState(false)
+  const [newNodeForm, setNewNodeForm] = useState({
+    label: '',
+    type: 'message' as NodeType,
+    description: '',
+    insertAfterId: '' // Which node to insert after
+  })
+
+  //  CHANGE 3: Logic to save the new node and wire up the flow connections
+  function handleSaveNode() {
+    if (!newNodeForm.label || !newNodeForm.insertAfterId) return
+    
+    const newNodeId = `n${Date.now()}`
+    const newNode: FlowNode = {
+      id: newNodeId,
+      type: newNodeForm.type,
+      label: newNodeForm.label,
+      description: newNodeForm.description,
+      next: []
+    }
+
+    setNodes(prevNodes => {
+      const newNodes = [...prevNodes]
+      const insertIndex = newNodes.findIndex(n => n.id === newNodeForm.insertAfterId)
+      
+      if (insertIndex !== -1) {
+        const previousNode = newNodes[insertIndex]
+        
+        // The new node inherits the 'next' targets of the previous node
+        newNode.next = previousNode.next ? [...previousNode.next] : []
+        
+        // The previous node now points exclusively to the new node
+        previousNode.next = [newNodeId]
+        
+        // Insert the new node into the visual array
+        newNodes.splice(insertIndex + 1, 0, newNode)
+      }
+      return newNodes
+    })
+
+    // Reset form and close dialog
+    setShowAddNodeDialog(false)
+    setNewNodeForm({ label: '', type: 'message', description: '', insertAfterId: '' })
+  }
+
+
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -98,7 +154,7 @@ export function ConversationFlows() {
               ))}
             </SelectContent>
           </Select>
-          <Button size="sm" className="gap-2">
+          <Button size="sm" className="gap-2" onClick={() => setShowAddNodeDialog(true)}>
             <Plus className="h-4 w-4" />
             Add Node
           </Button>
@@ -124,16 +180,24 @@ export function ConversationFlows() {
 
           {/* Node list (linear representation) */}
           <div className="flex flex-col gap-2">
-            {flowNodes.map((node, i) => {
+            {nodes.map((node, i) => {
               const s = nodeStyles[node.type]
               const Icon = s.icon
               const stats = nodeStats[node.id]
               return (
                 <div key={node.id} className="flex flex-col gap-0">
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelected(node.id === selected?.id ? null : node)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelected(node.id === selected?.id ? null : node)
+                      }
+                    }}
                     className={cn(
-                      'flex items-start gap-3 rounded-md border px-4 py-3 text-left transition-colors hover:bg-accent',
+                      'flex items-start gap-3 rounded-md border px-4 py-3 text-left transition-colors hover:bg-accent cursor-pointer',
                       s.border, s.bg,
                       selected?.id === node.id && 'ring-1 ring-[var(--sidebar-primary)]/40'
                     )}
@@ -174,7 +238,7 @@ export function ConversationFlows() {
                         <Trash2 className="h-3 w-3" />
                       </button>
                     </div>
-                  </button>
+                  </div>
 
                   {/* Connector */}
                   {i < flowNodes.length - 1 && (
@@ -250,7 +314,7 @@ export function ConversationFlows() {
                         <span className="text-muted-foreground">Exits to</span>
                         <div className="flex flex-wrap gap-1">
                           {selected.next.map((nId) => {
-                            const target = flowNodes.find((n) => n.id === nId)
+                            const target = nodes.find((n) => n.id === nId)
                             return (
                               <Badge key={nId} variant="outline" className="text-[10px] px-1.5 py-0 h-4">
                                 {target?.label ?? nId}
@@ -316,6 +380,91 @@ export function ConversationFlows() {
           </div>
         )}
       </div>
+      {/*  CORRECTED ADD NODE DIALOG  */}
+      <Dialog open={showAddNodeDialog} onOpenChange={setShowAddNodeDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add New Node</DialogTitle>
+            <DialogDescription>
+              Define the logic for this step in the conversation flow.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-2">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium">Node Label</Label>
+              <Input 
+                placeholder="e.g. Ask for Order Number" 
+                value={newNodeForm.label} 
+                onChange={(e) => setNewNodeForm(f => ({ ...f, label: e.target.value }))}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium">Node Type</Label>
+              <Select 
+                value={newNodeForm.type} 
+                //  FIXED: Handled the potential `null` value safely
+                onValueChange={(v) => {
+                  if (v) {
+                    setNewNodeForm(f => ({ ...f, type: v as NodeType }))
+                  }
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="trigger">Trigger</SelectItem>
+                  <SelectItem value="message">Message</SelectItem>
+                  <SelectItem value="condition">Condition</SelectItem>
+                  <SelectItem value="action">Action</SelectItem>
+                  <SelectItem value="end">End</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium">Description</Label>
+              <textarea 
+                placeholder="What happens in this node?"
+                value={newNodeForm.description}
+                onChange={(e) => setNewNodeForm(f => ({ ...f, description: e.target.value }))}
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium">Insert After (Flow Connection)</Label>
+              <Select 
+                value={newNodeForm.insertAfterId} 
+                //  FIXED: Handled the potential `null` value safely
+                onValueChange={(v) => {
+                  if (v) {
+                    setNewNodeForm(f => ({ ...f, insertAfterId: v }))
+                  }
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Select node to insert after" /></SelectTrigger>
+                <SelectContent>
+                  {nodes.map((n) => (
+                    <SelectItem key={n.id} value={n.id}>
+                      {n.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                The new node will be placed immediately after the selected node in the flow.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddNodeDialog(false)}>Cancel</Button>
+            <Button onClick={handleSaveNode}>Save Node</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }

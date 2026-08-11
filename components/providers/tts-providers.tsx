@@ -10,11 +10,79 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import {
-  Volume2, Plus, Settings2, Zap, CheckCircle2, XCircle, Loader2,
-  AlertTriangle, ChevronUp, ChevronDown, Eye, EyeOff,
-} from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  Plus, CheckCircle2, XCircle, Zap, Volume2, Settings2, ChevronUp, ChevronDown,
+  Loader2, AlertTriangle, Eye, EyeOff, Info, Lock, Globe, AudioLines, Sparkles,
+  Gauge, SlidersHorizontal, Mic, Radio
+} from 'lucide-react'
+
+// ─── Provider Capability Metadata (READ-ONLY, predefined per provider) ──────
+type ProviderCapabilities = {
+  streaming: boolean
+  multilingualVoices: boolean
+  voiceCloning: boolean
+  emotionStyleControl: boolean
+  speedControl: boolean
+  pitchControl: boolean
+  loudnessControl: boolean
+  expressivenessControl: boolean
+  lowLatencyGeneration: boolean
+}
+
+const capabilityLabels: Record<keyof ProviderCapabilities, { label: string; icon: React.ElementType }> = {
+  streaming:              { label: 'Streaming',                    icon: Radio },
+  multilingualVoices:     { label: 'Multilingual Voices',          icon: Globe },
+  voiceCloning:           { label: 'Voice Cloning',                icon: Mic },
+  emotionStyleControl:    { label: 'Emotion / Style Control',      icon: Sparkles },
+  speedControl:           { label: 'Speed Control',                icon: Gauge },
+  pitchControl:           { label: 'Pitch Control',                icon: SlidersHorizontal },
+  loudnessControl:        { label: 'Loudness / Volume Control',    icon: Volume2 },
+  expressivenessControl:  { label: 'Expressiveness Control',       icon: AudioLines },
+  lowLatencyGeneration:   { label: 'Low-latency Voice Generation', icon: Zap },
+}
+
+const providerCapabilities: Record<string, ProviderCapabilities> = {
+  elevenlabs: {
+    streaming: true, multilingualVoices: true, voiceCloning: true,
+    emotionStyleControl: true, speedControl: true, pitchControl: false,
+    loudnessControl: false, expressivenessControl: true, lowLatencyGeneration: true,
+  },
+  cartesia: {
+    streaming: true, multilingualVoices: false, voiceCloning: false,
+    emotionStyleControl: true, speedControl: true, pitchControl: true,
+    loudnessControl: true, expressivenessControl: false, lowLatencyGeneration: true,
+  },
+  azure: {
+    streaming: true, multilingualVoices: true, voiceCloning: false,
+    emotionStyleControl: true, speedControl: true, pitchControl: true,
+    loudnessControl: true, expressivenessControl: false, lowLatencyGeneration: false,
+  },
+  google: {
+    streaming: true, multilingualVoices: true, voiceCloning: false,
+    emotionStyleControl: false, speedControl: true, pitchControl: true,
+    loudnessControl: true, expressivenessControl: false, lowLatencyGeneration: false,
+  },
+  aws: {
+    streaming: true, multilingualVoices: true, voiceCloning: false,
+    emotionStyleControl: false, speedControl: true, pitchControl: true,
+    loudnessControl: true, expressivenessControl: false, lowLatencyGeneration: false,
+  },
+  deepgram: {
+    streaming: true, multilingualVoices: false, voiceCloning: true,
+    emotionStyleControl: false, speedControl: true, pitchControl: false,
+    loudnessControl: false, expressivenessControl: false, lowLatencyGeneration: true,
+  },
+}
+
+const supportedAudioFormats: Record<string, string[]> = {
+  elevenlabs: ['mp3', 'pcm', 'ulaw'],
+  cartesia:   ['pcm', 'mulaw', 'wav'],
+  azure:      ['mp3', 'ogg', 'wav', 'pcm'],
+  google:     ['mp3', 'ogg', 'wav', 'pcm', 'mulaw'],
+  aws:        ['mp3', 'ogg', 'pcm', 'json'],
+  deepgram:   ['mp3', 'wav', 'pcm', 'mulaw', 'flac'],
+}
 
 const statusCfg: Record<string, { label: string; className: string }> = {
   active:   { label: 'Active',   className: 'border-[var(--status-active)]/30 text-[var(--status-active)]' },
@@ -22,6 +90,7 @@ const statusCfg: Record<string, { label: string; className: string }> = {
   error:    { label: 'Error',    className: 'border-destructive/30 text-destructive' },
 }
 
+// ─── Main Component ─────────────────────────────────────────────────────────
 export function TTSProviders() {
   const [providers, setProviders] = useState<TTSProvider[]>(ttsProviders)
   const [editTarget, setEditTarget] = useState<TTSProvider | null>(null)
@@ -126,6 +195,7 @@ export function TTSProviders() {
   )
 }
 
+// ─── TTSCard (unchanged) ────────────────────────────────────────────────────
 function TTSCard({
   provider: p, isFirst, isLast, testState, onToggle, onMoveUp, onMoveDown, onTest, onEdit,
 }: {
@@ -141,6 +211,7 @@ function TTSCard({
 }) {
   const sc = statusCfg[p.status]
   const isActive = p.status === 'active'
+  const caps = providerCapabilities[p.id] ?? providerCapabilities.elevenlabs
 
   return (
     <div className={cn(
@@ -196,9 +267,12 @@ function TTSCard({
             ))}
           </div>
 
-          <div className="mt-2 flex items-center gap-3">
-            <CapBadge label="Streaming" on={p.streaming} />
-            <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[240px]">
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <CapBadge label="Streaming" on={caps.streaming} />
+            <CapBadge label="Voice Clone" on={caps.voiceCloning} />
+            <CapBadge label="Emotion" on={caps.emotionStyleControl} />
+            <CapBadge label="Low-latency" on={caps.lowLatencyGeneration} />
+            <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[200px]">
               ID: {p.voiceId}
             </span>
           </div>
@@ -217,6 +291,7 @@ function TTSCard({
   )
 }
 
+// ─── Capability Badge ───────────────────────────────────────────────────────
 function CapBadge({ label, on }: { label: string; on: boolean }) {
   return (
     <span className={cn(
@@ -229,6 +304,7 @@ function CapBadge({ label, on }: { label: string; on: boolean }) {
   )
 }
 
+// ─── Test Button (unchanged) ────────────────────────────────────────────────
 function TestButton({ state, onTest }: { state: TestState; onTest: () => void }) {
   if (state === 'testing') return (
     <Button size="sm" variant="outline" className="h-8 gap-1.5 px-2.5 text-xs" disabled>
@@ -252,6 +328,7 @@ function TestButton({ state, onTest }: { state: TestState; onTest: () => void })
   )
 }
 
+// ─── Edit Dialog (EXPANDED) ─────────────────────────────────────────────────
 function EditTTSDialog({
   provider, onClose, onSave,
 }: {
@@ -262,37 +339,55 @@ function EditTTSDialog({
   const [form, setForm] = useState({ ...provider })
   const [showKey, setShowKey] = useState(false)
 
+  // Load predefined capabilities for this provider (READ-ONLY)
+  const capabilities = providerCapabilities[provider.id] ?? providerCapabilities.elevenlabs
+  const formats = supportedAudioFormats[provider.id] ?? ['mp3', 'pcm']
+
   function set<K extends keyof TTSProvider>(k: K, v: TTSProvider[K]) {
     setForm((f) => ({ ...f, [k]: v }))
   }
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Configure {provider.name}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-2 max-h-[70vh] overflow-y-auto pr-1">
-          <Section label="Authentication">
-            <div className="flex flex-col gap-1.5">
-              <Label>API Key</Label>
-              <div className="flex gap-2">
+
+          {/* ─── Provider Connection ─────────────────────────────────────── */}
+          <Section label="Provider Connection">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>API Key</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type={showKey ? 'text' : 'password'}
+                    value={form.apiKey}
+                    onChange={(e) => set('apiKey', e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                  <Button size="sm" variant="outline" className="shrink-0" onClick={() => setShowKey((v) => !v)}>
+                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Base URL / Endpoint</Label>
                 <Input
-                  type={showKey ? 'text' : 'password'}
-                  value={form.apiKey}
-                  onChange={(e) => set('apiKey', e.target.value)}
+                  value={(form as any).baseUrl ?? `https://api.${provider.id}.com/v1`}
+                  onChange={(e) => setForm((f) => ({ ...f, baseUrl: e.target.value }))}
                   className="font-mono text-xs"
+                  placeholder="https://api.provider.com/v1"
                 />
-                <Button size="sm" variant="outline" className="shrink-0" onClick={() => setShowKey((v) => !v)}>
-                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
               </div>
             </div>
           </Section>
 
           <Separator />
 
-          <Section label="Voice Settings">
+          {/* ─── Voice Configuration ─────────────────────────────────────── */}
+          <Section label="Voice Configuration">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label>Model</Label>
@@ -322,11 +417,28 @@ function EditTTSDialog({
                 </Select>
               </div>
             </div>
+
+            {/* Voice capability support indicators */}
+            <div className="mt-3 rounded-md border border-border bg-muted/30 p-3">
+              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Info className="h-3 w-3" />
+                Voice Control Support (determined by provider)
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <SupportIndicator label="Speed" supported={capabilities.speedControl} />
+                <SupportIndicator label="Pitch" supported={capabilities.pitchControl} />
+                <SupportIndicator label="Loudness" supported={capabilities.loudnessControl} />
+                <SupportIndicator label="Expressiveness" supported={capabilities.expressivenessControl} />
+                <SupportIndicator label="Voice Cloning" supported={capabilities.voiceCloning} />
+                <SupportIndicator label="Emotion/Style" supported={capabilities.emotionStyleControl} />
+              </div>
+            </div>
           </Section>
 
           <Separator />
 
-          <Section label="Audio Settings">
+          {/* ─── Audio Configuration ─────────────────────────────────────── */}
+          <Section label="Audio Configuration">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label>Speed ({form.speed}×)</Label>
@@ -344,7 +456,11 @@ function EditTTSDialog({
                   value={form.pitch}
                   onChange={(e) => set('pitch', parseFloat(e.target.value))}
                   className="w-full accent-primary"
+                  disabled={!capabilities.pitchControl}
                 />
+                {!capabilities.pitchControl && (
+                  <p className="text-[10px] text-muted-foreground italic">Not supported by {provider.name}</p>
+                )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label>Sample Rate (Hz)</Label>
@@ -359,23 +475,110 @@ function EditTTSDialog({
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label>Audio Format</Label>
-                <Input value={form.audioFormat} onChange={(e) => set('audioFormat', e.target.value)} />
+                <Select value={form.audioFormat} onValueChange={(v) => v && set('audioFormat', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {formats.map((f) => (
+                      <SelectItem key={f} value={f} className="font-mono text-xs">{f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+
+            {/* Streaming & Low-latency */}
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
+                <div>
+                  <p className="text-sm font-medium">Streaming</p>
+                  <p className="text-xs text-muted-foreground">Stream audio chunks as synthesized</p>
+                </div>
+                <Switch checked={form.streaming} onCheckedChange={(v) => set('streaming', v)} />
+              </div>
+              <div className={cn(
+                'flex items-center justify-between rounded-md border px-3 py-2.5',
+                capabilities.lowLatencyGeneration ? 'border-border' : 'border-border/50 opacity-50',
+              )}>
+                <div>
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    Low-latency Mode
+                    {!capabilities.lowLatencyGeneration && <Lock className="h-3 w-3 text-muted-foreground" />}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {capabilities.lowLatencyGeneration ? 'Real-time streaming enabled' : 'Not supported by provider'}
+                  </p>
+                </div>
+                <Switch
+                  checked={capabilities.lowLatencyGeneration}
+                  disabled={!capabilities.lowLatencyGeneration}
+                />
+              </div>
+            </div>
+
+            {/* Supported formats display */}
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-muted-foreground">Supported formats:</span>
+              {formats.map((f) => (
+                <Badge key={f} variant="outline" className="text-[10px] font-mono px-1.5 py-0 h-4">{f}</Badge>
+              ))}
             </div>
           </Section>
 
           <Separator />
 
-          <Section label="Capabilities">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Streaming</p>
-                <p className="text-xs text-muted-foreground">Stream audio chunks as they are synthesized.</p>
+          {/* ─── Provider Capabilities (READ-ONLY) ───────────────────────── */}
+          <Section label="Provider Capabilities">
+            <div className="rounded-md border border-border bg-muted/20 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">
+                  These capabilities are defined by the provider and cannot be modified.
+                  They control which voice settings are available during Agent Creation.
+                </p>
               </div>
-              <Switch checked={form.streaming} onCheckedChange={(v) => set('streaming', v)} />
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.entries(capabilityLabels) as [keyof ProviderCapabilities, { label: string; icon: React.ElementType }][]).map(([key, { label, icon: Icon }]) => {
+                  const supported = capabilities[key]
+                  return (
+                    <div
+                      key={key}
+                      className={cn(
+                        'flex items-center gap-2 rounded-md border px-3 py-2',
+                        supported
+                          ? 'border-[var(--status-active)]/25 bg-[var(--status-active)]/5'
+                          : 'border-border bg-muted/20 opacity-60',
+                      )}
+                    >
+                      <Icon className={cn('h-3.5 w-3.5 shrink-0', supported ? 'text-[var(--status-active)]' : 'text-muted-foreground')} />
+                      <div className="flex-1 min-w-0">
+                        <p className={cn('text-[11px] font-medium truncate', supported ? 'text-foreground' : 'text-muted-foreground')}>
+                          {label}
+                        </p>
+                      </div>
+                      {supported ? (
+                        <CheckCircle2 className="h-3 w-3 text-[var(--status-active)] shrink-0" />
+                      ) : (
+                        <XCircle className="h-3 w-3 text-muted-foreground shrink-0" />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Relationship note */}
+              <div className="mt-3 rounded-md border border-border bg-card p-3">
+                <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
+                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span>
+                    These capabilities determine which fields are enabled in <strong>Agent Creation → Voice Settings</strong>.
+                    For example, if <em>Pitch Control</em> is not supported, the pitch slider will be disabled for agents using this provider.
+                  </span>
+                </p>
+              </div>
             </div>
           </Section>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={() => onSave(form)}>Save Changes</Button>
@@ -385,6 +588,24 @@ function EditTTSDialog({
   )
 }
 
+// ─── Support Indicator (small inline badge) ─────────────────────────────────
+function SupportIndicator({ label, supported }: { label: string; supported: boolean }) {
+  return (
+    <div className={cn(
+      'flex items-center gap-1.5 text-[11px]',
+      supported ? 'text-foreground' : 'text-muted-foreground opacity-60',
+    )}>
+      {supported ? (
+        <CheckCircle2 className="h-3 w-3 text-[var(--status-active)]" />
+      ) : (
+        <XCircle className="h-3 w-3 text-muted-foreground" />
+      )}
+      <span>{label}</span>
+    </div>
+  )
+}
+
+// ─── Section helper (unchanged) ─────────────────────────────────────────────
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3">

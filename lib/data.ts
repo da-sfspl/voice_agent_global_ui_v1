@@ -322,6 +322,7 @@ export type KnowledgeBase = {
   description: string
   documents: number
   urls: number
+  apis: number
   tokens: number
   status: 'ready' | 'processing' | 'error'
   lastUpdated: string
@@ -329,10 +330,10 @@ export type KnowledgeBase = {
 }
 
 export const knowledgeBases: KnowledgeBase[] = [
-  { id: 'kb-001', name: 'Product & FAQ Docs', description: 'Product documentation, FAQ articles, and support runbooks.', documents: 142, urls: 28, tokens: 1_240_000, status: 'ready', lastUpdated: '2026-08-05T10:30:00Z', usedByAgents: ['agt-001', 'agt-005'] },
-  { id: 'kb-002', name: 'Healthcare Policies', description: 'HIPAA guidelines, appointment policies, and care coordination protocols.', documents: 64, urls: 12, tokens: 580_000, status: 'ready', lastUpdated: '2026-07-22T09:00:00Z', usedByAgents: ['agt-001', 'agt-003'] },
-  { id: 'kb-003', name: 'Sales Playbook', description: 'ICP definitions, talk tracks, objection handling, and pricing sheets.', documents: 38, urls: 6, tokens: 310_000, status: 'ready', lastUpdated: '2026-08-01T14:00:00Z', usedByAgents: ['agt-002'] },
-  { id: 'kb-004', name: 'Compliance & Legal', description: 'Regulatory compliance documents, terms of service, and privacy policies.', documents: 22, urls: 4, tokens: 190_000, status: 'processing', lastUpdated: '2026-08-07T08:00:00Z', usedByAgents: [] },
+  { id: 'kb-001', name: 'Product & FAQ Docs', description: 'Product documentation, FAQ articles, and support runbooks.', documents: 142, urls: 28, apis: 2, tokens: 1_240_000, status: 'ready', lastUpdated: '2026-08-05T10:30:00Z', usedByAgents: ['agt-001', 'agt-005'] },
+  { id: 'kb-002', name: 'Healthcare Policies', description: 'HIPAA guidelines, appointment policies, and care coordination protocols.', documents: 64, urls: 12, apis: 1, tokens: 580_000, status: 'ready', lastUpdated: '2026-07-22T09:00:00Z', usedByAgents: ['agt-001', 'agt-003'] },
+  { id: 'kb-003', name: 'Sales Playbook', description: 'ICP definitions, talk tracks, objection handling, and pricing sheets.', documents: 38, urls: 6, apis: 0, tokens: 310_000, status: 'ready', lastUpdated: '2026-08-01T14:00:00Z', usedByAgents: ['agt-002'] },
+  { id: 'kb-004', name: 'Compliance & Legal', description: 'Regulatory compliance documents, terms of service, and privacy policies.', documents: 22, urls: 4, apis: 0, tokens: 190_000, status: 'processing', lastUpdated: '2026-08-07T08:00:00Z', usedByAgents: [] },
 ]
 
 export type Prompt = {

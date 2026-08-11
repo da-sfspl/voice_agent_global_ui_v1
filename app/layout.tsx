@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'VoiceAI Platform — Enterprise Voice Agent Management',
   description: 'Enterprise-grade platform for configuring, deploying, monitoring and managing AI voice agents for inbound and outbound phone calls.',
-  generator: 'v0.app',
+  generator: 'Dev',
 }
 
 export const viewport: Viewport = {

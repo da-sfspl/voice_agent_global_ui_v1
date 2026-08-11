@@ -21,6 +21,9 @@ import {
   Download, Filter,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
+} from '@/components/ui/dialog'
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
   completed: { label: 'Completed', className: 'border-[var(--status-active)]/30 text-[var(--status-active)]', icon: CheckCircle2 },
@@ -41,9 +44,77 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
+// Mock Data: Phone Numbers
+const availableNumbers = [
+  { id: 'num-001', number: '+1 (555) 012-3456', label: 'Main Line' },
+  { id: 'num-002', number: '+1 (555) 987-6543', label: 'Support Line' },
+  { id: 'num-003', number: '+1 (555) 246-8101', label: 'Sales Line' },
+  { id: 'num-004', number: '+1 (555) 135-7911', label: 'After Hours' },
+  { id: 'num-005', number: '+1 (555) 468-2035', label: 'VIP Line' },
+]
+
 export function InboundCalls() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+
+  const [routes, setRoutes] = useState<InboundRoute[]>(inboundRoutes)
+  const [showAddRouteDialog, setShowAddRouteDialog] = useState(false)
+  
+  //  Define the exact union types that match your InboundRoute interface
+  type FallbackType = 'voicemail' | 'queue' | 'transfer'
+  type ScheduleType = 'business-hours' | 'always' | 'custom'
+  
+
+const [newRouteForm, setNewRouteForm] = useState<{
+  name: string
+  phoneNumber: string
+  agentId: string
+  schedule: ScheduleType
+  fallback: FallbackType
+  maxQueueDepth: number
+  priority: number   
+}>({
+  name: '',
+  phoneNumber: '',
+  agentId: '',
+  schedule: 'business-hours',
+  fallback: 'voicemail',
+  maxQueueDepth: 10,
+  priority: 1,    
+})
+
+  function handleSaveRoute() {
+    if (!newRouteForm.name || !newRouteForm.phoneNumber || !newRouteForm.agentId) return
+    
+    const selectedAgent = agents.find(a => a.id === newRouteForm.agentId)
+    const selectedNumber = availableNumbers.find(n => n.id === newRouteForm.phoneNumber)
+    
+  const newRoute: InboundRoute = {
+    id: `route-${Date.now()}`,
+    name: newRouteForm.name,
+    phoneNumber: selectedNumber?.number ?? newRouteForm.phoneNumber,
+    phoneNumberId: newRouteForm.phoneNumber,   // 👈 ADD THIS
+    agentId: newRouteForm.agentId,             // 👈 ADD THIS
+    agentName: selectedAgent?.name ?? 'Unknown',
+    schedule: newRouteForm.schedule,
+    fallback: newRouteForm.fallback,
+    maxQueueDepth: newRouteForm.maxQueueDepth,
+    priority: newRouteForm.priority,           // 👈 ADD THIS
+    status: 'active',
+  }
+  setRoutes(prev => [...prev, newRoute])
+  setShowAddRouteDialog(false)
+  setNewRouteForm({ 
+    name: '', 
+    phoneNumber: '', 
+    agentId: '', 
+    schedule: 'business-hours', 
+    fallback: 'voicemail', 
+    maxQueueDepth: 10,
+    priority: 1,  
+  })
+}
+
 
   const filtered = inboundCalls.filter((c) => {
     const matchSearch =
@@ -70,7 +141,7 @@ export function InboundCalls() {
             Configure routing, agent assignment, and review inbound call history.
           </p>
         </div>
-        <Button size="sm" className="gap-1.5">
+        <Button size="sm" className="gap-1.5" onClick={() => setShowAddRouteDialog(true)}>
           <Plus className="h-4 w-4" />
           Add Route
         </Button>
@@ -119,7 +190,7 @@ export function InboundCalls() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {inboundRoutes.map((route) => (
+                  {routes.map((route) => (
                     <RouteRow key={route.id} route={route} />
                   ))}
                 </TableBody>
@@ -151,12 +222,13 @@ export function InboundCalls() {
                   <p className="text-xs text-muted-foreground">Calls beyond this limit are sent to fallback.</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label>Queue Timeout (seconds)</Label>
-                  <Input type="number" defaultValue={120} />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Fallback Action</Label>
-                  <Select defaultValue="voicemail">
+                  <Label className="text-xs font-medium">Fallback Action</Label>
+                  <Select 
+                    value={newRouteForm.fallback} 
+                    onValueChange={(v) => {
+                      if (v) setNewRouteForm(f => ({ ...f, fallback: v as FallbackType }))
+                    }}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="voicemail">Send to Voicemail</SelectItem>
@@ -297,6 +369,132 @@ export function InboundCalls() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/*  ADD ROUTE DIALOG  */}
+      <Dialog open={showAddRouteDialog} onOpenChange={setShowAddRouteDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add New Route</DialogTitle>
+            <DialogDescription>
+              Configure a new inbound call routing rule.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-2">
+            {/* Route Name */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium">Route Name</Label>
+              <Input 
+                placeholder="e.g. Support Hotline" 
+                value={newRouteForm.name}
+                onChange={(e) => setNewRouteForm(f => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+
+            {/* Phone Number Dropdown */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium">Phone Number</Label>
+              <Select 
+                value={newRouteForm.phoneNumber} 
+                onValueChange={(v) => {
+                  if (v) setNewRouteForm(f => ({ ...f, phoneNumber: v }))
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Select available number" /></SelectTrigger>
+                <SelectContent>
+                  {availableNumbers.map((num) => (
+                    <SelectItem key={num.id} value={num.id}>
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono text-xs">{num.number}</span>
+                        <span className="text-muted-foreground text-xs">({num.label})</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Assigned Agent Dropdown */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium">Assigned Agent</Label>
+              <Select 
+                value={newRouteForm.agentId} 
+                onValueChange={(v) => {
+                  if (v) setNewRouteForm(f => ({ ...f, agentId: v }))
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Select AI agent" /></SelectTrigger>
+                <SelectContent>
+                  {agents.filter((a) => a.type !== 'outbound').map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      <span className="flex items-center gap-2">
+                        <Mic2 className="h-3 w-3 text-primary" />
+                        {agent.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Schedule */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium">Schedule</Label>
+              <Select 
+                value={newRouteForm.schedule} 
+                onValueChange={(v) => {
+                  if (v) setNewRouteForm(f => ({ ...f, schedule: v as ScheduleType }))
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="business-hours">Business Hours</SelectItem>
+                  <SelectItem value="always">Always On (24/7)</SelectItem>
+                  <SelectItem value="custom">Custom Schedule</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Fallback & Queue Depth */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium">Fallback Action</Label>
+                <Select 
+                  value={newRouteForm.fallback} 
+                  onValueChange={(v) => {
+                    if (v) setNewRouteForm(f => ({ ...f, fallback: v }))
+                  }}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="voicemail">Voicemail</SelectItem>
+                    <SelectItem value="queue">Hold in Queue</SelectItem>
+                    <SelectItem value="transfer">Transfer to Human</SelectItem>
+                    <SelectItem value="disconnect">Disconnect</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium">Max Queue Depth</Label>
+                <Input 
+                  type="number" 
+                  min={1} 
+                  max={50}
+                  value={newRouteForm.maxQueueDepth}
+                  onChange={(e) => setNewRouteForm(f => ({ ...f, maxQueueDepth: parseInt(e.target.value) || 10 }))}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddRouteDialog(false)}>Cancel</Button>
+            <Button onClick={handleSaveRoute} disabled={!newRouteForm.name || !newRouteForm.phoneNumber || !newRouteForm.agentId}>
+              Save Route
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

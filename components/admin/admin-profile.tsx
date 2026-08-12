@@ -96,7 +96,7 @@ export function AdminSettings() {
     <div className="p-6 flex flex-col gap-6 max-w-4xl">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2"><Settings2 className="h-5 w-5" /> Settings</h1>
+          <h1 className="text-xl font-semibold flex items-center gap-2"><Settings2 className="h-5 w-5" /> Profile</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Platform-wide configuration for your workspace.</p>
         </div>
         <div className="flex gap-2">
@@ -157,7 +157,7 @@ export function AdminSettings() {
       </Section>
 
       {/* Calling & Voice */}
-      <Section icon={Phone} title="Calling & Voice">
+      {/* <Section icon={Phone} title="Calling & Voice">
         <Field label="Default calling hours start">
           <Input type="time" className="h-8 text-sm" value={settings.callingHoursStart} onChange={e => set('callingHoursStart', e.target.value)} />
         </Field>
@@ -193,10 +193,10 @@ export function AdminSettings() {
           <SwitchField label="Call recording" description="Record all calls by default for new agents" checked={settings.callRecording} onChange={v => set('callRecording', v)} />
           <SwitchField label="Transcription" description="Transcribe all calls by default for new agents" checked={settings.transcription} onChange={v => set('transcription', v)} />
         </div>
-      </Section>
+      </Section> */}
 
       {/* AI Platform */}
-      <Section icon={Brain} title="AI Platform">
+      {/* <Section icon={Brain} title="AI Platform">
         <Field label="Default LLM provider">
           <Select value={settings.defaultLlmProvider} onValueChange={v => v && set('defaultLlmProvider', v)}>
             <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
@@ -239,7 +239,7 @@ export function AdminSettings() {
         <div className="sm:col-span-2">
           <SwitchField label="Provider fallback" description="Automatically fall back to secondary provider on failure" checked={settings.fallbackEnabled} onChange={v => set('fallbackEnabled', v)} />
         </div>
-      </Section>
+      </Section> */}
 
       {/* Security */}
       <Section icon={ShieldCheck} title="Security">

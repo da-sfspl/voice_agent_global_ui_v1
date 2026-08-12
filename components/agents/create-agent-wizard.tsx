@@ -133,7 +133,7 @@ export function CreateAgentWizard() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" render={<Link href="/agents" />} className="h-8 px-2 text-muted-foreground">
+        <Button variant="ghost" size="sm" render={<Link href="/agents" />} nativeButton={false} className="h-8 px-2 text-muted-foreground">
           <ChevronLeft className="h-4 w-4 mr-1" />
           Agents
         </Button>

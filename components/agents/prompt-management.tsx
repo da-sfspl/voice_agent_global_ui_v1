@@ -22,8 +22,10 @@ import {
   Copy,
   RotateCcw,
   Tag,
+  Bot, ChevronDown, Sparkles,
+  ChevronLeft, CheckCircle2, FileText, Settings2, Eye
 } from 'lucide-react'
-import { ChevronLeft, CheckCircle2, FileText, Settings2, Eye } from 'lucide-react'
+  
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription
 } from '@/components/ui/dialog'
@@ -36,6 +38,14 @@ const typeStyles: Record<Prompt['type'], string> = {
   closing:    'bg-muted text-muted-foreground border-border',
 }
 
+const typeIcons: Record<Prompt['type'], React.ElementType> = {
+  system:     Settings2,
+  welcome:    Sparkles,
+  fallback:   RotateCcw,
+  escalation: Tag,
+  closing:    CheckCircle2,
+}
+
 const promptTypes = ['system', 'welcome', 'fallback', 'escalation', 'closing'] as const
 
 const wizardSteps = [
@@ -44,16 +54,16 @@ const wizardSteps = [
   { id: 3, label: 'Review',   icon: Eye },
 ]
 
+// ─── Main Component ─────────────────────────────────────────────────────────
 export function PromptManagement() {
   const [search, setSearch] = useState('')
-  const [filterAgent, setFilterAgent] = useState('all')
-  const [filterType, setFilterType] = useState('all')
-  const [selected, setSelected] = useState<Prompt>(prompts[0])
-  const [editContent, setEditContent] = useState(prompts[0].content)
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0].id)
+  const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState('')
   const [isDirty, setIsDirty] = useState(false)
   const [promptList, setPromptList] = useState<Prompt[]>(prompts)
 
-  // 👇 NEW: Wizard state
+  // Wizard state
   const [showWizard, setShowWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
   const [wizardForm, setWizardForm] = useState({
@@ -63,28 +73,36 @@ export function PromptManagement() {
     content: '',
   })
 
+  // Filter agents by search
+  const filteredAgents = agents.filter((a) =>
+    a.name.toLowerCase().includes(search.toLowerCase()) ||
+    a.description.toLowerCase().includes(search.toLowerCase())
+  )
 
-  const filtered = prompts.filter((p) => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.agentName.toLowerCase().includes(search.toLowerCase())
-    const matchAgent = filterAgent === 'all' || p.agentId === filterAgent
-    const matchType  = filterType  === 'all' || p.type === filterType
-    return matchSearch && matchAgent && matchType
-  })
+  // Get prompts for selected agent, grouped by type
+  const selectedAgent = agents.find(a => a.id === selectedAgentId)
+  const agentPrompts = promptList.filter(p => p.agentId === selectedAgentId)
+  const groupedPrompts = promptTypes.reduce((acc, type) => {
+    acc[type] = agentPrompts.filter(p => p.type === type)
+    return acc
+  }, {} as Record<Prompt['type'], Prompt[]>)
+
+  const selectedPrompt = selectedPromptId ? promptList.find(p => p.id === selectedPromptId) : null
 
   function selectPrompt(p: Prompt) {
-    setSelected(p)
+    setSelectedPromptId(p.id)
     setEditContent(p.content)
     setIsDirty(false)
   }
 
   function handleContentChange(val: string) {
     setEditContent(val)
-    setIsDirty(val !== selected.content)
+    setIsDirty(val !== selectedPrompt?.content)
   }
 
-   function openWizard() {
-    setWizardForm({ name: '', type: 'system', agentId: '', content: '' })
+  // Wizard handlers
+  function openWizard() {
+    setWizardForm({ name: '', type: 'system', agentId: selectedAgentId, content: '' })
     setWizardStep(1)
     setShowWizard(true)
   }
@@ -127,7 +145,7 @@ export function PromptManagement() {
     }
 
     setPromptList(prev => [newPrompt, ...prev])
-    setSelected(newPrompt)
+    setSelectedPromptId(newPrompt.id)
     setEditContent(newPrompt.content)
     setIsDirty(false)
     closeWizard()
@@ -155,198 +173,231 @@ export function PromptManagement() {
       </div>
 
       <div className="flex gap-5 min-h-0">
-        {/* Left panel — prompt list */}
+        {/* Left panel — agents list */}
         <div className="w-72 shrink-0 flex flex-col gap-3">
-          {/* Filters */}
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Search prompts..."
+              placeholder="Search agents..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-8 text-sm"
             />
           </div>
-          <div className="flex gap-2">
-            <Select value={filterAgent} onValueChange={(v) => setFilterAgent(v ?? 'all')}>
-              <SelectTrigger className="h-8 text-xs flex-1">
-                <SelectValue placeholder="Agent" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Agents</SelectItem>
-                {agents.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterType} onValueChange={(v) => setFilterType(v ?? 'all')}>
-              <SelectTrigger className="h-8 text-xs flex-1">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {(['system','welcome','fallback','escalation','closing'] as const).map((t) => (
-                  <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Prompt list */}
-          <div className="flex flex-col gap-1">
-            {filtered.length === 0 && (
-              <p className="text-xs text-muted-foreground py-4 text-center">No prompts match your filters.</p>
+          {/* Agents list */}
+          <div className="flex flex-col gap-1 overflow-y-auto">
+            {filteredAgents.length === 0 && (
+              <p className="text-xs text-muted-foreground py-4 text-center">No agents match your search.</p>
             )}
-            {filtered.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => selectPrompt(p)}
-                className={cn(
-                  'flex flex-col gap-1 rounded-md border px-3 py-2.5 text-left transition-colors',
-                  selected?.id === p.id
-                    ? 'border-[var(--sidebar-primary)]/40 bg-[var(--sidebar-primary)]/8'
-                    : 'border-transparent hover:border-border hover:bg-accent'
-                )}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium truncate">{p.name}</span>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 h-4 capitalize', typeStyles[p.type])}>
-                    {p.type}
-                  </Badge>
-                  <span className="text-[11px] text-muted-foreground truncate">{p.agentName}</span>
-                </div>
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Hash className="h-2.5 w-2.5" />
-                  <span>{p.tokens} tokens</span>
-                  <span className="mx-1">·</span>
-                  <span>v{p.version}</span>
-                </div>
-              </button>
-            ))}
+            {filteredAgents.map((agent) => {
+              const agentPromptCount = promptList.filter(p => p.agentId === agent.id).length
+              const isSelected = selectedAgentId === agent.id
+              return (
+                <button
+                  key={agent.id}
+                  onClick={() => {
+                    setSelectedAgentId(agent.id)
+                    setSelectedPromptId(null)
+                    setIsDirty(false)
+                  }}
+                  className={cn(
+                    'flex flex-col gap-1 rounded-md border px-3 py-2.5 text-left transition-colors',
+                    isSelected
+                      ? 'border-[var(--sidebar-primary)]/40 bg-[var(--sidebar-primary)]/8'
+                      : 'border-transparent hover:border-border hover:bg-accent'
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Bot className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="text-sm font-medium truncate">{agent.name}</span>
+                    </div>
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 h-4 capitalize', 
+                      agent.status === 'active' ? 'border-[var(--status-active)]/30 text-[var(--status-active)]' : 'border-border text-muted-foreground'
+                    )}>
+                      {agent.status}
+                    </Badge>
+                    <span className="text-[11px] text-muted-foreground truncate">
+                      {agentPromptCount} prompt{agentPromptCount !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* Right panel — editor */}
-        {selected && (
+        {/* Right panel — agent prompts */}
+        {selectedAgent && (
           <div className="flex-1 min-w-0 flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
-            {/* Editor header */}
+            {/* Agent header */}
             <div className="flex items-start justify-between gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-semibold">{selected.name}</h2>
-                  <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 h-4 capitalize', typeStyles[selected.type])}>
-                    {selected.type}
+                  <Bot className="h-5 w-5 text-primary" />
+                  <h2 className="text-base font-semibold">{selectedAgent.name}</h2>
+                  <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 h-4 capitalize',
+                    selectedAgent.status === 'active' ? 'border-[var(--status-active)]/30 text-[var(--status-active)]' : 'border-border text-muted-foreground'
+                  )}>
+                    {selectedAgent.status}
                   </Badge>
-                  {isDirty && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-[var(--status-warning)] border-[var(--status-warning)]/30">
-                      Unsaved
-                    </Badge>
-                  )}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground">{selectedAgent.description}</p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                   <span className="flex items-center gap-1">
-                    <Tag className="h-3 w-3" />
-                    {selected.agentName}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    {selected.modifiedBy}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {new Date(selected.lastModified).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    <MessageSquareText className="h-3 w-3" />
+                    {agentPrompts.length} total prompts
                   </span>
                   <span className="flex items-center gap-1">
                     <Hash className="h-3 w-3" />
-                    v{selected.version}
+                    {agentPrompts.reduce((sum, p) => sum + p.tokens, 0).toLocaleString()} tokens
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => { setEditContent(selected.content); setIsDirty(false) }}>
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Revert
-                </Button>
-                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                  <Copy className="h-3.5 w-3.5" />
-                  Duplicate
-                </Button>
-                <Button size="sm" className="h-8 gap-1.5 text-xs" disabled={!isDirty}>
-                  <Save className="h-3.5 w-3.5" />
-                  Save Version
-                </Button>
-              </div>
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={openWizard}>
+                <Plus className="h-3.5 w-3.5" />
+                Add Prompt
+              </Button>
             </div>
 
             <Separator />
 
-            {/* Prompt fields */}
-            <div className="flex flex-col gap-4 flex-1">
-              <div className="flex gap-4">
-                <div className="flex-1 flex flex-col gap-1.5">
-                  <Label className="text-xs">Prompt Name</Label>
-                  <Input 
-                    key={`name-${selected.id}`} 
-                    defaultValue={selected.name} 
-                    className="h-8 text-sm" 
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs">Type</Label>
-                  <Select key={`type-${selected.id}`} defaultValue={selected.type}>
-                    <SelectTrigger className="h-8 text-sm w-36"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {promptTypes.map((t) => (
-                        <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs">Agent</Label>
-                  <Select key={`agent-${selected.id}`} defaultValue={selected.agentId}>
-                    <SelectTrigger className="h-8 text-sm w-52"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {agents.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5 flex-1">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs">Prompt Content</Label>
-                  <span className="text-[11px] text-muted-foreground">
-                    ~{selected.tokens} tokens · {wordCount} words
-                  </span>
-                </div>
-                <Textarea
-                  value={editContent}
-                  onChange={(e) => handleContentChange(e.target.value)}
-                  className="flex-1 resize-none font-mono text-sm min-h-[340px] leading-relaxed"
-                  placeholder="Enter the prompt content..."
-                />
-              </div>
-
-              {/* Variables hint */}
-              <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2">
-                <p className="text-[11px] text-muted-foreground">
-                  <span className="font-medium text-foreground">Variables: </span>
-                  Use <code className="font-mono bg-muted px-1 rounded">{'{{customer_name}}'}</code>,{' '}
-                  <code className="font-mono bg-muted px-1 rounded">{'{{account_id}}'}</code>,{' '}
-                  <code className="font-mono bg-muted px-1 rounded">{'{{current_date}}'}</code> for dynamic injection at runtime.
-                </p>
-              </div>
+            {/* Prompts grouped by type */}
+            <div className="flex-1 overflow-y-auto flex flex-col gap-4">
+              {promptTypes.map((type) => {
+                const prompts = groupedPrompts[type]
+                const Icon = typeIcons[type]
+                return (
+                  <div key={type} className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Icon className={cn('h-4 w-4', typeStyles[type].includes('text-[var(--status-active)]') ? 'text-[var(--status-active)]' : typeStyles[type].includes('text-[var(--sidebar-primary)]') ? 'text-[var(--sidebar-primary)]' : 'text-muted-foreground')} />
+                      <span className="text-sm font-semibold capitalize">{type}</span>
+                      <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 h-4', typeStyles[type])}>
+                        {prompts.length}
+                      </Badge>
+                    </div>
+                    
+                    {prompts.length === 0 ? (
+                      <div className="rounded-md border border-dashed border-border bg-muted/20 px-4 py-3">
+                        <p className="text-xs text-muted-foreground">No {type} prompts configured for this agent.</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {prompts.map((prompt) => {
+                          const isSelected = selectedPromptId === prompt.id
+                          return (
+                            <button
+                              key={prompt.id}
+                              onClick={() => selectPrompt(prompt)}
+                              className={cn(
+                                'flex items-start gap-3 rounded-md border px-3 py-2.5 text-left transition-colors',
+                                isSelected
+                                  ? 'border-[var(--sidebar-primary)]/40 bg-[var(--sidebar-primary)]/8'
+                                  : 'border-border hover:bg-accent'
+                              )}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium truncate">{prompt.name}</span>
+                                  {prompt.id === selectedPromptId && isDirty && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-[var(--status-warning)] border-[var(--status-warning)]/30 shrink-0">
+                                      Unsaved
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-0.5">
+                                  <span className="flex items-center gap-1">
+                                    <Hash className="h-2.5 w-2.5" />
+                                    {prompt.tokens} tokens
+                                  </span>
+                                  <span>·</span>
+                                  <span>v{prompt.version}</span>
+                                  <span>·</span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-2.5 w-2.5" />
+                                    {new Date(prompt.lastModified).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </span>
+                                </div>
+                              </div>
+                              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground mt-1" />
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
+
+            {/* Prompt editor (when a prompt is selected) */}
+            {selectedPrompt && (
+              <>
+                <Separator />
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold">{selectedPrompt.name}</h3>
+                      <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 h-4 capitalize', typeStyles[selectedPrompt.type])}>
+                        {selectedPrompt.type}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => { 
+                        setEditContent(selectedPrompt.content)
+                        setIsDirty(false)
+                      }}>
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Revert
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                        <Copy className="h-3.5 w-3.5" />
+                        Duplicate
+                      </Button>
+                      <Button size="sm" className="h-8 gap-1.5 text-xs" disabled={!isDirty}>
+                        <Save className="h-3.5 w-3.5" />
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Prompt Content</Label>
+                      <span className="text-[11px] text-muted-foreground">
+                        ~{selectedPrompt.tokens} tokens · {wordCount} words
+                      </span>
+                    </div>
+                    <Textarea
+                      value={editContent}
+                      onChange={(e) => handleContentChange(e.target.value)}
+                      className="resize-none font-mono text-sm min-h-[200px] leading-relaxed"
+                      placeholder="Enter the prompt content..."
+                    />
+                  </div>
+
+                  {/* Variables hint */}
+                  <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2">
+                    <p className="text-[11px] text-muted-foreground">
+                      <span className="font-medium text-foreground">Variables: </span>
+                      Use <code className="font-mono bg-muted px-1 rounded">{'{{customer_name}}'}</code>,{' '}
+                      <code className="font-mono bg-muted px-1 rounded">{'{{account_id}}'}</code>,{' '}
+                      <code className="font-mono bg-muted px-1 rounded">{'{{current_date}}'}</code> for dynamic injection at runtime.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
 
+      {/* Wizard Dialog */}
       <Dialog open={showWizard} onOpenChange={(open) => { if (!open) closeWizard() }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -385,7 +436,7 @@ export function PromptManagement() {
 
           <Separator />
 
-          {/* ─── Step 1: Details ─────────────────────────────────────────── */}
+          {/* Step 1: Details */}
           {wizardStep === 1 && (
             <div className="flex flex-col gap-4 py-2 min-h-[280px]">
               <div className="flex flex-col gap-1.5">
@@ -412,7 +463,7 @@ export function PromptManagement() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[11px] text-muted-foreground">Determines when this prompt is used in the conversation.</p>
+                  <p className="text-[11px] text-muted-foreground">Determines when this prompt is used.</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label>Assigned Agent</Label>
@@ -454,7 +505,7 @@ export function PromptManagement() {
             </div>
           )}
 
-          {/* ─── Step 2: Content ─────────────────────────────────────────── */}
+          {/* Step 2: Content */}
           {wizardStep === 2 && (
             <div className="flex flex-col gap-4 py-2 min-h-[280px]">
               <div className="flex items-center justify-between">
@@ -471,7 +522,6 @@ export function PromptManagement() {
                 autoFocus
               />
 
-              {/* Variables hint */}
               <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2">
                 <p className="text-[11px] text-muted-foreground">
                   <span className="font-medium text-foreground">Available variables: </span>
@@ -485,7 +535,7 @@ export function PromptManagement() {
             </div>
           )}
 
-          {/* ─── Step 3: Review ──────────────────────────────────────────── */}
+          {/* Step 3: Review */}
           {wizardStep === 3 && (
             <div className="flex flex-col gap-4 py-2 min-h-[280px]">
               <div className="flex items-center gap-2 text-sm font-medium text-[var(--status-active)]">
@@ -524,7 +574,7 @@ export function PromptManagement() {
             </div>
           )}
 
-          {/* ─── Wizard Footer ───────────────────────────────────────────── */}
+          {/* Wizard Footer */}
           <DialogFooter className="flex items-center justify-between sm:justify-between">
             <div>
               {wizardStep > 1 && (

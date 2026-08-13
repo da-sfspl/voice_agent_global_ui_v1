@@ -202,6 +202,13 @@ const navGroups: { group: string; items: NavItem[] }[] = [
         { label: 'Routing & Fallback', href: '/platform-providers/routing', icon: ArrowLeftRight },
       ],
     },
+        {
+      label: 'Provider Access',
+      icon: Brain,
+      children: [
+        { label: 'Provider Access Control', href: '/provider-access', icon: ShieldCheck },
+      ],
+    },
     {
       label: 'Platform Monitoring',
       icon: Activity,

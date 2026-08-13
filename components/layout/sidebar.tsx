@@ -53,26 +53,26 @@ type NavItem = {
 }
 
 const navGroups: { group: string; items: NavItem[] }[] = [
-  {
-    group: '',
-    items: [
-      { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-    ],
-  },
-  {
-    group: 'Platform',
-    items: [
-      {
-        label: 'Platform',
-        icon: Layers,
-        children: [
-          { label: 'Workspace Management', href: '/platform/workspaces', icon: Building2 },
-          { label: 'Users', href: '/platform/users', icon: Users },
-          { label: 'Roles & Permissions', href: '/platform/roles', icon: ShieldCheck },
-        ],
-      },
-    ],
-  },
+  // {
+  //   group: '',
+  //   items: [
+  //     { label: 'Dashboard', href: '/', icon: LayoutDashboard },
+  //   ],
+  // },
+  // {
+  //   group: 'Platform',
+  //   items: [
+  //     {
+  //       label: 'Platform',
+  //       icon: Layers,
+  //       children: [
+  //         { label: 'Workspace Management', href: '/platform/workspaces', icon: Building2 },
+  //         { label: 'Users', href: '/platform/users', icon: Users },
+  //         { label: 'Roles & Permissions', href: '/platform/roles', icon: ShieldCheck },
+  //       ],
+  //     },
+  //   ],
+  // },
   {
     group: 'AI Agents',
     items: [
@@ -134,50 +134,50 @@ const navGroups: { group: string; items: NavItem[] }[] = [
       },
     ],
   },
-  {
-    group: 'Analytics',
-    items: [
-      {
-        label: 'Analytics',
-        icon: BarChart3,
-        children: [
-          { label: 'Calls', href: '/analytics/calls', icon: Gauge },
-          { label: 'AI Performance', href: '/analytics/ai', icon: LineChart },
-          { label: 'Campaign Reports', href: '/analytics/campaigns', icon: BarChart3 },
-          { label: 'Cost Analytics', href: '/analytics/costs', icon: DollarSign },
-        ],
-      },
-    ],
-  },
-  {
-    group: 'Monitoring',
-    items: [
-      {
-        label: 'Monitoring',
-        icon: Activity,
-        children: [
-          { label: 'System Health', href: '/monitoring/health', icon: Activity },
-          { label: 'Logs', href: '/monitoring/logs', icon: ScrollText },
-          { label: 'Alerts', href: '/monitoring/alerts', icon: BellDot, badge: '5' },
-        ],
-      },
-    ],
-  },
-  {
-    group: 'Administration',
-    items: [
-      {
-        label: 'Administration',
-        icon: Settings2,
-        children: [
-          { label: 'Settings', href: '/admin/settings', icon: Settings2 },
-          { label: 'Notifications', href: '/admin/notifications', icon: BellDot },
-          { label: 'Branding', href: '/admin/branding', icon: Palette },
-          { label: 'Audit Logs', href: '/admin/audit', icon: ClipboardList },
-        ],
-      },
-    ],
-  },
+  // {
+  //   group: 'Analytics',
+  //   items: [
+  //     {
+  //       label: 'Analytics',
+  //       icon: BarChart3,
+  //       children: [
+  //         { label: 'Calls', href: '/analytics/calls', icon: Gauge },
+  //         { label: 'AI Performance', href: '/analytics/ai', icon: LineChart },
+  //         { label: 'Campaign Reports', href: '/analytics/campaigns', icon: BarChart3 },
+  //         { label: 'Cost Analytics', href: '/analytics/costs', icon: DollarSign },
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   group: 'Monitoring',
+  //   items: [
+  //     {
+  //       label: 'Monitoring',
+  //       icon: Activity,
+  //       children: [
+  //         { label: 'System Health', href: '/monitoring/health', icon: Activity },
+  //         { label: 'Logs', href: '/monitoring/logs', icon: ScrollText },
+  //         { label: 'Alerts', href: '/monitoring/alerts', icon: BellDot, badge: '5' },
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   group: 'Administration',
+  //   items: [
+  //     {
+  //       label: 'Administration',
+  //       icon: Settings2,
+  //       children: [
+  //         { label: 'Settings', href: '/admin/settings', icon: Settings2 },
+  //         { label: 'Notifications', href: '/admin/notifications', icon: BellDot },
+  //         { label: 'Branding', href: '/admin/branding', icon: Palette },
+  //         { label: 'Audit Logs', href: '/admin/audit', icon: ClipboardList },
+  //       ],
+  //     },
+  //   ],
+  // },
 ]
 
 function NavItemRow({

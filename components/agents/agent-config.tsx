@@ -22,8 +22,15 @@ import {
   CheckCircle2, XCircle, AlertTriangle, Info, Phone, Users, User, PhoneForwarded,
   Zap, Database, Globe, SlidersHorizontal, Volume2, Radio, Sparkles, Code2,
   ArrowRight, Clock, Hash, Tag, FileText, Calendar, Send, Webhook, Shield,
-  Eye, Lock, AlertCircle
+  Eye, Lock, AlertCircle, Workflow
 } from 'lucide-react'
+import { NewKnowledgeBaseDialog } from '@/components/agents/dialogs/new-knowledge-base-dialog'
+import {
+  AddToolDialog, AddPreCallActionDialog, AddRuleDialog,
+  AddExtractionFieldDialog, AddPostCallActionDialog,
+  type ToolItem, type PreCallAction, type RuleItem,
+  type ExtractionField, type PostCallAction
+} from '@/components/agents/dialogs'
 
 
 // ─── Provider Capabilities (READ-ONLY metadata) ─────────────────────────────
@@ -184,9 +191,27 @@ function UnsupportedBadge({ feature }: { feature: string }) {
 
 // ─── Section 1: Agent Info ──────────────────────────────────────────────────
 function SectionInfo({ agent }: { agent: Agent }) {
+  const [callingSettings, setCallingSettings] = useState({
+    callingHoursStart: '09:00',
+    callingHoursEnd: '18:00',
+    callingDays: 'weekdays',
+    defaultVoice: 'neural-female-en',
+    maxCallDuration: 15,
+    callRecording: true,
+    transcription: true,
+  })
+
+  function updateCallingSetting<K extends keyof typeof callingSettings>(
+    key: K,
+    value: typeof callingSettings[K]
+  ) {
+    setCallingSettings(prev => ({ ...prev, [key]: value }))
+  }
+
   return (
-    <ConfigSection title="Agent Information" description="Core identity and classification of this agent.">
+    <ConfigSection title="Agent Information" description="Core identity, classification, and calling configuration.">
       <div className="flex flex-col gap-4">
+        {/* Basic Info */}
         <div className="flex flex-col gap-1.5">
           <Label>Agent Name</Label>
           <Input defaultValue={agent.name} />
@@ -224,6 +249,103 @@ function SectionInfo({ agent }: { agent: Agent }) {
         <div className="flex flex-col gap-1.5">
           <Label>Tags</Label>
           <Input defaultValue={agent.tags.join(', ')} placeholder="Comma-separated tags" />
+        </div>
+
+        <Separator />
+
+        {/* Calling & Voice Configuration */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Calling & Voice Configuration</h3>
+          </div>
+
+          <FieldRow>
+            <div className="flex flex-col gap-1.5">
+              <Label>Calling Hours Start</Label>
+              <Input 
+                type="time" 
+                value={callingSettings.callingHoursStart}
+                onChange={(e) => updateCallingSetting('callingHoursStart', e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Calling Hours End</Label>
+              <Input 
+                type="time" 
+                value={callingSettings.callingHoursEnd}
+                onChange={(e) => updateCallingSetting('callingHoursEnd', e.target.value)}
+              />
+            </div>
+          </FieldRow>
+
+          <FieldRow>
+            <div className="flex flex-col gap-1.5">
+              <Label>Calling Days</Label>
+              <Select 
+                value={callingSettings.callingDays} 
+                onValueChange={(v) => v && updateCallingSetting('callingDays', v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekdays">Weekdays (Mon–Fri)</SelectItem>
+                  <SelectItem value="all">All days</SelectItem>
+                  <SelectItem value="custom">Custom schedule</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Default Voice</Label>
+              <Select 
+                value={callingSettings.defaultVoice} 
+                onValueChange={(v) => v && updateCallingSetting('defaultVoice', v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="neural-female-en">Neural Female (English)</SelectItem>
+                  <SelectItem value="neural-male-en">Neural Male (English)</SelectItem>
+                  <SelectItem value="elevenlabs-rachel">ElevenLabs — Rachel</SelectItem>
+                  <SelectItem value="elevenlabs-adam">ElevenLabs — Adam</SelectItem>
+                  <SelectItem value="azure-aria">Azure Neural — Aria</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </FieldRow>
+
+          <FieldRow>
+            <div className="flex flex-col gap-1.5">
+              <Label>Max Call Duration (minutes)</Label>
+              <Input 
+                type="number" 
+                value={callingSettings.maxCallDuration}
+                onChange={(e) => updateCallingSetting('maxCallDuration', parseInt(e.target.value) || 15)}
+              />
+              <p className="text-xs text-muted-foreground">Maximum duration before automatic call termination</p>
+            </div>
+          </FieldRow>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
+              <div>
+                <p className="text-sm font-medium">Call Recording</p>
+                <p className="text-xs text-muted-foreground">Record all calls by default</p>
+              </div>
+              <Switch 
+                checked={callingSettings.callRecording} 
+                onCheckedChange={(v) => updateCallingSetting('callRecording', v)}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
+              <div>
+                <p className="text-sm font-medium">Transcription</p>
+                <p className="text-xs text-muted-foreground">Transcribe all calls by default</p>
+              </div>
+              <Switch 
+                checked={callingSettings.transcription} 
+                onCheckedChange={(v) => updateCallingSetting('transcription', v)}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </ConfigSection>
@@ -806,25 +928,58 @@ function SectionMemory({ agent }: { agent: Agent }) {
 
 // ─── Section 6: Knowledge Base (unchanged) ──────────────────────────────────
 function SectionKnowledge({ agent }: { agent: Agent }) {
-  const linked = knowledgeBases.filter((kb) => agent.knowledgeBases.includes(kb.id))
-  const unlinked = knowledgeBases.filter((kb) => !agent.knowledgeBases.includes(kb.id))
+  const [showNewKbDialog, setShowNewKbDialog] = useState(false)
+  const [linkedIds, setLinkedIds] = useState<string[]>(agent.knowledgeBases)
+
+  const linked = knowledgeBases.filter((kb) => linkedIds.includes(kb.id))
+  const unlinked = knowledgeBases.filter((kb) => !linkedIds.includes(kb.id))
+
+  function handleAttach(kbId: string) {
+    setLinkedIds(prev => [...prev, kbId])
+  }
+
+  function handleDetach(kbId: string) {
+    setLinkedIds(prev => prev.filter(id => id !== kbId))
+  }
+
+  function handleCreateNewKb(data: { name: string; description: string }) {
+    // In a real app, this would create the KB via API and add it to linkedIds
+    console.log('Creating new KB:', data)
+    alert(`Knowledge base "${data.name}" would be created and attached to this agent.`)
+  }
 
   return (
     <ConfigSection title="Knowledge Base" description="Attach knowledge bases to give the agent access to documents and URLs.">
       <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Attached ({linked.length})</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Attached ({linked.length})
+        </p>
         {linked.map((kb) => (
           <div key={kb.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
             <BookOpen className="h-4 w-4 text-primary shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-medium">{kb.name}</p>
-              <p className="text-xs text-muted-foreground">{kb.documents} docs · {kb.urls} URLs · {(kb.tokens / 1000).toFixed(0)}k tokens</p>
+              <p className="text-xs text-muted-foreground">
+                {kb.documents} docs · {kb.urls} URLs · {(kb.tokens / 1000).toFixed(0)}k tokens
+              </p>
             </div>
-            <Badge variant="outline" className="border-[var(--status-active)]/30 text-[var(--status-active)] text-[10px]">{kb.status}</Badge>
-            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive h-7 px-2">Detach</Button>
+            <Badge variant="outline" className="border-[var(--status-active)]/30 text-[var(--status-active)] text-[10px]">
+              {kb.status}
+            </Badge>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive h-7 px-2"
+              onClick={() => handleDetach(kb.id)}
+            >
+              Detach
+            </Button>
           </div>
         ))}
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-2">Available ({unlinked.length})</p>
+
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-2">
+          Available ({unlinked.length})
+        </p>
         {unlinked.map((kb) => (
           <div key={kb.id} className="flex items-center gap-3 rounded-lg border border-dashed border-border/60 p-3 opacity-70">
             <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -832,28 +987,67 @@ function SectionKnowledge({ agent }: { agent: Agent }) {
               <p className="text-sm font-medium">{kb.name}</p>
               <p className="text-xs text-muted-foreground">{kb.documents} docs · {kb.urls} URLs</p>
             </div>
-            <Button size="sm" variant="outline" className="h-7 px-3 text-xs">Attach</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-3 text-xs"
+              onClick={() => handleAttach(kb.id)}
+            >
+              Attach
+            </Button>
           </div>
         ))}
-        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1">
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="self-start gap-1.5 mt-1"
+          onClick={() => setShowNewKbDialog(true)}
+        >
           <BookOpen className="h-4 w-4" />
           Create New Knowledge Base
         </Button>
       </div>
+
+      {/* Reusable dialog */}
+      <NewKnowledgeBaseDialog
+        open={showNewKbDialog}
+        onOpenChange={setShowNewKbDialog}
+        onSave={handleCreateNewKb}
+      />
     </ConfigSection>
   )
 }
 
 // ─── Section 7: Tools & Functions ───────────────────────────────────────────
 function SectionTools() {
-  const [showAddTool, setShowAddTool] = useState(false)
-  const tools = [
-    { id: 'lookup_order', name: 'lookup_order', description: 'Look up order status by order ID or email address.', enabled: true, type: 'REST API' },
-    { id: 'create_ticket', name: 'create_ticket', description: 'Create a support ticket in the CRM system.', enabled: true, type: 'REST API' },
-    { id: 'transfer_call', name: 'transfer_call', description: 'Transfer the active call to a specified queue or agent.', enabled: true, type: 'Built-in' },
-    { id: 'get_calendar', name: 'get_calendar', description: 'Retrieve available appointment slots from the scheduling system.', enabled: false, type: 'REST API' },
-    { id: 'send_sms', name: 'send_sms', description: 'Send an SMS follow-up to the caller\'s phone number.', enabled: false, type: 'REST API' },
-  ]
+  const [showDialog, setShowDialog] = useState(false)
+  const [editingItem, setEditingItem] = useState<ToolItem | null>(null)
+  const [tools, setTools] = useState<ToolItem[]>([
+    { id: 'lookup_order', name: 'lookup_order', description: 'Look up order status by order ID or email address.', type: 'REST API', endpoint: '/api/orders', httpMethod: 'GET', authentication: 'api-key', timeout: 5000, retryPolicy: '3' },
+    { id: 'create_ticket', name: 'create_ticket', description: 'Create a support ticket in the CRM system.', type: 'REST API', endpoint: '/api/tickets', httpMethod: 'POST', authentication: 'bearer', timeout: 5000, retryPolicy: '3' },
+    { id: 'transfer_call', name: 'transfer_call', description: 'Transfer the active call to a specified queue or agent.', type: 'Built-in' },
+    { id: 'get_calendar', name: 'get_calendar', description: 'Retrieve available appointment slots from the scheduling system.', type: 'REST API', endpoint: '/api/calendar', httpMethod: 'GET', authentication: 'api-key', timeout: 5000, retryPolicy: '3' },
+    { id: 'send_sms', name: 'send_sms', description: 'Send an SMS follow-up to the caller\'s phone number.', type: 'REST API', endpoint: '/api/sms', httpMethod: 'POST', authentication: 'api-key', timeout: 5000, retryPolicy: '3' },
+  ])
+
+  function openAdd() {
+    setEditingItem(null)
+    setShowDialog(true)
+  }
+
+  function openEdit(tool: ToolItem) {
+    setEditingItem(tool)
+    setShowDialog(true)
+  }
+
+  function handleSave(tool: ToolItem) {
+    if (editingItem) {
+      setTools(prev => prev.map(t => t.id === editingItem.id ? { ...t, ...tool } : t))
+    } else {
+      setTools(prev => [...prev, { ...tool, id: `tool-${Date.now()}` }])
+    }
+  }
 
   return (
     <ConfigSection title="Tools & Function Calling" description="Define functions the agent can call during conversations.">
@@ -871,139 +1065,50 @@ function SectionTools() {
               <p className="text-xs text-muted-foreground mt-0.5">{tool.description}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(tool)}>
                 <Edit className="h-3.5 w-3.5" />
               </Button>
-              <Switch defaultChecked={tool.enabled} />
+              <Switch defaultChecked />
             </div>
           </div>
         ))}
-        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={() => setShowAddTool(true)}>
+        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={openAdd}>
           <Wrench className="h-4 w-4" />
           Add Custom Function
         </Button>
       </div>
 
-      <Dialog open={showAddTool} onOpenChange={setShowAddTool}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Custom Function</DialogTitle>
-            <DialogDescription>Define a new function the agent can call during conversations.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-2 max-h-[60vh] overflow-y-auto">
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Function Name</Label>
-                <Input placeholder="e.g. check_inventory" className="font-mono text-xs" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Function Type</Label>
-                <Select defaultValue="rest-api">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="rest-api">REST API</SelectItem>
-                    <SelectItem value="webhook">Webhook</SelectItem>
-                    <SelectItem value="built-in">Built-in</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldRow>
-            <div className="flex flex-col gap-1.5">
-              <Label>Description</Label>
-              <Textarea rows={2} placeholder="Describe what this function does..." />
-            </div>
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Endpoint / URL</Label>
-                <Input placeholder="https://api.example.com/v1/resource" className="font-mono text-xs" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>HTTP Method</Label>
-                <Select defaultValue="GET">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GET">GET</SelectItem>
-                    <SelectItem value="POST">POST</SelectItem>
-                    <SelectItem value="PUT">PUT</SelectItem>
-                    <SelectItem value="DELETE">DELETE</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldRow>
-            <div className="flex flex-col gap-1.5">
-              <Label>Authentication</Label>
-              <Select defaultValue="api-key">
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="api-key">API Key</SelectItem>
-                  <SelectItem value="bearer">Bearer Token</SelectItem>
-                  <SelectItem value="basic">Basic Auth</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Request Parameters</Label>
-              <div className="rounded-md border border-border p-3 space-y-2">
-                <div className="grid grid-cols-4 gap-2 text-xs">
-                  <Input placeholder="Parameter name" className="font-mono text-xs" />
-                  <Select defaultValue="string">
-                    <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="string">String</SelectItem>
-                      <SelectItem value="number">Number</SelectItem>
-                      <SelectItem value="boolean">Boolean</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input placeholder="Description" className="text-xs" />
-                  <div className="flex items-center gap-2">
-                    <Switch />
-                    <span className="text-xs">Required</span>
-                  </div>
-                </div>
-                <Button size="sm" variant="ghost" className="gap-1.5 text-xs">
-                  <Plus className="h-3 w-3" /> Add Parameter
-                </Button>
-              </div>
-            </div>
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Timeout (ms)</Label>
-                <Input type="number" defaultValue="5000" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Retry Policy</Label>
-                <Select defaultValue="3">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">No retry</SelectItem>
-                    <SelectItem value="1">1 retry</SelectItem>
-                    <SelectItem value="3">3 retries</SelectItem>
-                    <SelectItem value="5">5 retries</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldRow>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddTool(false)}>Cancel</Button>
-            <Button>Add Function</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddToolDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        onSave={handleSave}
+        editingItem={editingItem}
+      />
     </ConfigSection>
   )
 }
 
 // ─── Section 8: Pre-Call Actions ────────────────────────────────────────────
 function SectionPreCallActions() {
-  const [showAddAction, setShowAddAction] = useState(false)
-  const actions = [
-    { id: 'customer_lookup', name: 'Customer Lookup', type: 'Function', source: 'CRM API', enabled: true, required: true },
-    { id: 'account_status', name: 'Account Status Check', type: 'REST API', source: 'Billing System', enabled: true, required: true },
-    { id: 'eligibility_check', name: 'Eligibility Verification', type: 'Business Rule', source: 'Internal', enabled: true, required: false },
-    { id: 'crm_enrichment', name: 'CRM Data Enrichment', type: 'Data Enrichment', source: 'Salesforce', enabled: false, required: false },
-  ]
+  const [showDialog, setShowDialog] = useState(false)
+  const [editingItem, setEditingItem] = useState<PreCallAction | null>(null)
+  const [actions, setActions] = useState<PreCallAction[]>([
+    { id: 'customer_lookup', name: 'Customer Lookup', type: 'Function', source: 'CRM API', endpoint: '/api/customers', conditions: '', timeout: 3000, failureBehavior: 'proceed-partial', required: true },
+    { id: 'account_status', name: 'Account Status Check', type: 'REST API', source: 'Billing System', endpoint: '/api/accounts', conditions: '', timeout: 3000, failureBehavior: 'proceed-partial', required: true },
+    { id: 'eligibility_check', name: 'Eligibility Verification', type: 'Business Rule', source: 'Internal', endpoint: '', conditions: '', timeout: 3000, failureBehavior: 'proceed', required: false },
+    { id: 'crm_enrichment', name: 'CRM Data Enrichment', type: 'Data Enrichment', source: 'Salesforce', endpoint: '/api/enrich', conditions: '', timeout: 3000, failureBehavior: 'proceed', required: false },
+  ])
+
+  function openAdd() { setEditingItem(null); setShowDialog(true) }
+  function openEdit(action: PreCallAction) { setEditingItem(action); setShowDialog(true) }
+
+  function handleSave(action: PreCallAction) {
+    if (editingItem) {
+      setActions(prev => prev.map(a => a.id === editingItem.id ? { ...a, ...action } : a))
+    } else {
+      setActions(prev => [...prev, { ...action, id: `precall-${Date.now()}` }])
+    }
+  }
 
   return (
     <ConfigSection title="Pre-Call Actions" description="Actions performed before an outbound call starts to gather context.">
@@ -1020,100 +1125,50 @@ function SectionPreCallActions() {
               <p className="text-xs text-muted-foreground mt-0.5">Source: {action.source}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(action)}>
                 <Edit className="h-3.5 w-3.5" />
               </Button>
-              <Switch defaultChecked={action.enabled} />
+              <Switch defaultChecked={action.required} />
             </div>
           </div>
         ))}
-        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={() => setShowAddAction(true)}>
+        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={openAdd}>
           <Zap className="h-4 w-4" />
           Add Pre-Call Action
         </Button>
       </div>
 
-      <Dialog open={showAddAction} onOpenChange={setShowAddAction}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Pre-Call Action</DialogTitle>
-            <DialogDescription>Define an action to execute before the call starts.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Action Name</Label>
-                <Input placeholder="e.g. Verify Customer Identity" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Action Type</Label>
-                <Select defaultValue="function">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="function">Function</SelectItem>
-                    <SelectItem value="rest-api">REST API</SelectItem>
-                    <SelectItem value="business-rule">Business Rule</SelectItem>
-                    <SelectItem value="data-enrichment">Data Enrichment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldRow>
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Source / Integration</Label>
-                <Input placeholder="e.g. Salesforce CRM" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Function or Endpoint</Label>
-                <Input placeholder="e.g. /api/v1/customers/{id}" className="font-mono text-xs" />
-              </div>
-            </FieldRow>
-            <div className="flex flex-col gap-1.5">
-              <Label>Conditions</Label>
-              <Textarea rows={2} placeholder="e.g. Only execute for outbound calls to existing customers" />
-            </div>
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Timeout (ms)</Label>
-                <Input type="number" defaultValue="3000" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Failure Behavior</Label>
-                <Select defaultValue="proceed-partial">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="proceed">Proceed</SelectItem>
-                    <SelectItem value="proceed-partial">Proceed with partial context</SelectItem>
-                    <SelectItem value="skip">Skip call</SelectItem>
-                    <SelectItem value="fail">Fail call</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldRow>
-            <div className="flex items-center gap-2">
-              <Switch />
-              <Label>Required (call fails if this action fails)</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddAction(false)}>Cancel</Button>
-            <Button>Add Action</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddPreCallActionDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        onSave={handleSave}
+        editingItem={editingItem}
+      />
     </ConfigSection>
   )
 }
 
 // ─── Section 9: Rules & Policies ────────────────────────────────────────────
 function SectionRules() {
-  const [showAddRule, setShowAddRule] = useState(false)
-  const rules = [
-    { id: 'human_request', name: 'Human Agent Request', condition: 'Caller requests human', action: 'Transfer to Support Queue', priority: 1, enabled: true },
-    { id: 'frustration', name: 'High Frustration', condition: 'Frustration count >= 2', action: 'Transfer to Support Queue', priority: 2, enabled: true },
-    { id: 'duration_limit', name: 'Call Duration Limit', condition: 'Call duration > 15 minutes', action: 'End Call', priority: 3, enabled: true },
-    { id: 'unresolved', name: 'Unresolved Issue', condition: 'Issue unresolved after 3 turns', action: 'Transfer to Support Queue', priority: 4, enabled: false },
-  ]
+  const [showDialog, setShowDialog] = useState(false)
+  const [editingItem, setEditingItem] = useState<RuleItem | null>(null)
+  const [rules, setRules] = useState<RuleItem[]>([
+    { id: 'human_request', name: 'Human Agent Request', description: '', priority: 1, conditionType: 'caller-request', conditionDetails: 'Caller requests human', actionType: 'transfer', actionConfig: 'Support Queue' },
+    { id: 'frustration', name: 'High Frustration', description: '', priority: 2, conditionType: 'frustration', conditionDetails: 'Frustration count >= 2', actionType: 'transfer', actionConfig: 'Support Queue' },
+    { id: 'duration_limit', name: 'Call Duration Limit', description: '', priority: 3, conditionType: 'duration', conditionDetails: 'Call duration > 15 minutes', actionType: 'end', actionConfig: '' },
+    { id: 'unresolved', name: 'Unresolved Issue', description: '', priority: 4, conditionType: 'unresolved', conditionDetails: 'Issue unresolved after 3 turns', actionType: 'transfer', actionConfig: 'Support Queue' },
+  ])
+
+  function openAdd() { setEditingItem(null); setShowDialog(true) }
+  function openEdit(rule: RuleItem) { setEditingItem(rule); setShowDialog(true) }
+
+  function handleSave(rule: RuleItem) {
+    if (editingItem) {
+      setRules(prev => prev.map(r => r.id === editingItem.id ? { ...r, ...rule } : r))
+    } else {
+      setRules(prev => [...prev, { ...rule, id: `rule-${Date.now()}` }])
+    }
+  }
 
   return (
     <ConfigSection title="Rules & Policies" description="Define conditions and actions that govern agent behavior during conversations.">
@@ -1128,164 +1183,225 @@ function SectionRules() {
               </div>
               <div className="flex items-center gap-2 mt-1 text-xs">
                 <span className="text-muted-foreground">WHEN:</span>
-                <code className="bg-muted px-1.5 py-0.5 rounded font-mono">{rule.condition}</code>
+                <code className="bg-muted px-1.5 py-0.5 rounded font-mono">{rule.conditionDetails}</code>
                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
                 <span className="text-muted-foreground">THEN:</span>
-                <code className="bg-muted px-1.5 py-0.5 rounded font-mono">{rule.action}</code>
+                <code className="bg-muted px-1.5 py-0.5 rounded font-mono">{rule.actionConfig || rule.actionType}</code>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(rule)}>
                 <Edit className="h-3.5 w-3.5" />
               </Button>
-              <Switch defaultChecked={rule.enabled} />
+              <Switch defaultChecked />
             </div>
           </div>
         ))}
-        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={() => setShowAddRule(true)}>
+        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={openAdd}>
           <Shield className="h-4 w-4" />
           Add Rule
         </Button>
       </div>
 
-      <Dialog open={showAddRule} onOpenChange={setShowAddRule}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Rule</DialogTitle>
-            <DialogDescription>Define a condition and action for agent behavior.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Rule Name</Label>
-                <Input placeholder="e.g. Transfer on Frustration" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Priority</Label>
-                <Input type="number" defaultValue="5" min="1" max="100" />
-              </div>
-            </FieldRow>
-            <div className="flex flex-col gap-1.5">
-              <Label>Description</Label>
-              <Textarea rows={2} placeholder="Describe when this rule should trigger..." />
-            </div>
-            <div className="rounded-lg border border-border p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-[var(--status-warning)]" />
-                <span className="text-sm font-semibold">WHEN / CONDITION</span>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Condition Type</Label>
-                <Select defaultValue="caller-request">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="caller-request">Caller requests human</SelectItem>
-                    <SelectItem value="frustration">Customer frustration threshold</SelectItem>
-                    <SelectItem value="unresolved">Issue unresolved after N turns</SelectItem>
-                    <SelectItem value="ineligible">Customer is not eligible</SelectItem>
-                    <SelectItem value="intent">Specific intent detected</SelectItem>
-                    <SelectItem value="field">Specific extracted field/value</SelectItem>
-                    <SelectItem value="duration">Call duration exceeds limit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Condition Details</Label>
-                <Input placeholder="e.g. Frustration count >= 2" className="font-mono text-xs" />
-              </div>
-            </div>
-            <div className="rounded-lg border border-border p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold">THEN / ACTION</span>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Action Type</Label>
-                <Select defaultValue="transfer">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="transfer">Transfer Call</SelectItem>
-                    <SelectItem value="end">End Call</SelectItem>
-                    <SelectItem value="invoke">Invoke Function</SelectItem>
-                    <SelectItem value="continue">Continue Conversation</SelectItem>
-                    <SelectItem value="change-flow">Change Conversation Flow</SelectItem>
-                    <SelectItem value="webhook">Trigger Webhook</SelectItem>
-                    <SelectItem value="variable">Set/Update Variable</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Action Configuration</Label>
-                <Input placeholder="e.g. Support Queue" />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddRule(false)}>Cancel</Button>
-            <Button>Add Rule</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddRuleDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        onSave={handleSave}
+        editingItem={editingItem}
+      />
     </ConfigSection>
   )
 }
 
 // ─── Section 10: Guardrails ─────────────────────────────────────────────────
+import { AddGuardrailDialog, type GuardrailItem } from '@/components/agents/dialogs'
+
 function SectionGuardrails() {
+  const [showDialog, setShowDialog] = useState(false)
+  const [editingItem, setEditingItem] = useState<GuardrailItem | null>(null)
+  const [guardrails, setGuardrails] = useState<GuardrailItem[]>([
+    { 
+      id: 'g1',
+      label: 'Block PII Collection', 
+      description: 'Prevent the agent from requesting or storing SSNs, full card numbers, or passwords.', 
+      action: 'Refuse',
+      detectionCondition: 'Detect when agent asks for or user provides SSN, credit card number, or password',
+      protectedData: 'SSN, credit card number, password, bank account',
+      responseBehavior: 'apologize',
+      enabled: true 
+    },
+    { 
+      id: 'g2',
+      label: 'Profanity Filter', 
+      description: 'Detect and suppress profane language in agent responses.', 
+      action: 'Redact',
+      detectionCondition: 'Detect profane or offensive language in agent output',
+      protectedData: 'Profanity, offensive language',
+      responseBehavior: 'silence',
+      enabled: true 
+    },
+    { 
+      id: 'g3',
+      label: 'Off-topic Deflection', 
+      description: 'Redirect conversations that deviate significantly from the agent\'s defined scope.', 
+      action: 'Refuse',
+      detectionCondition: 'Detect when conversation drifts outside agent scope or purpose',
+      protectedData: 'Off-topic discussions',
+      responseBehavior: 'clarify',
+      enabled: true 
+    },
+    { 
+      id: 'g4',
+      label: 'Maximum Call Duration', 
+      description: 'Automatically end calls exceeding the configured duration limit.', 
+      action: 'End Call',
+      detectionCondition: 'Call duration exceeds configured maximum',
+      protectedData: '',
+      responseBehavior: 'apologize',
+      enabled: false 
+    },
+    { 
+      id: 'g5',
+      label: 'Competitor Mention Detection', 
+      description: 'Flag or suppress mentions of competitor brand names.', 
+      action: 'Redact',
+      detectionCondition: 'Detect competitor brand names in conversation',
+      protectedData: 'Competitor brands',
+      responseBehavior: 'silence',
+      enabled: false 
+    },
+    { 
+      id: 'g6',
+      label: 'HIPAA Compliance Mode', 
+      description: 'Apply additional PHI handling and logging restrictions.', 
+      action: 'Refuse',
+      detectionCondition: 'Detect Protected Health Information (PHI) in conversation',
+      protectedData: 'PHI, medical records, health conditions',
+      responseBehavior: 'escalate',
+      enabled: false 
+    },
+  ])
+
+  const [blockedTopics, setBlockedTopics] = useState('investments, legal advice, medical diagnosis')
+
+  function openAdd() {
+    setEditingItem(null)
+    setShowDialog(true)
+  }
+
+  function openEdit(guardrail: GuardrailItem) {
+    setEditingItem(guardrail)
+    setShowDialog(true)
+  }
+
+  function handleSave(guardrail: GuardrailItem) {
+    if (editingItem) {
+      setGuardrails(prev => prev.map(g => g.id === editingItem.id ? { ...g, ...guardrail } : g))
+    } else {
+      setGuardrails(prev => [...prev, { ...guardrail, id: `guardrail-${Date.now()}` }])
+    }
+  }
+
+  function handleDelete(id: string) {
+    setGuardrails(prev => prev.filter(g => g.id !== id))
+  }
+
   return (
     <ConfigSection title="Guardrails" description="Set safety and compliance boundaries for agent behavior.">
       <div className="flex flex-col gap-3">
-        {[
-          { label: 'Block PII Collection', desc: 'Prevent the agent from requesting or storing SSNs, full card numbers, or passwords.', enabled: true, action: 'Refuse' },
-          { label: 'Profanity Filter', desc: 'Detect and suppress profane language in agent responses.', enabled: true, action: 'Redact' },
-          { label: 'Off-topic Deflection', desc: 'Redirect conversations that deviate significantly from the agent\'s defined scope.', enabled: true, action: 'Refuse' },
-          { label: 'Maximum Call Duration', desc: 'Automatically end calls exceeding the configured duration limit.', enabled: false, action: 'End Call' },
-          { label: 'Competitor Mention Detection', desc: 'Flag or suppress mentions of competitor brand names.', enabled: false, action: 'Redact' },
-          { label: 'HIPAA Compliance Mode', desc: 'Apply additional PHI handling and logging restrictions.', enabled: false, action: 'Refuse' },
-        ].map((item) => (
-          <div key={item.label} className="flex items-start gap-3 rounded-lg border border-border p-4">
+        {guardrails.map((item) => (
+          <div key={item.id} className="flex items-start gap-3 rounded-lg border border-border p-4">
             <ShieldAlert className="h-4 w-4 text-[var(--status-warning)] mt-0.5 shrink-0" />
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium">{item.label}</p>
                 <Badge variant="outline" className="text-[10px] px-1.5">{item.action}</Badge>
+                {!item.enabled && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 text-muted-foreground">Disabled</Badge>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+              {item.protectedData && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  <span className="font-medium">Protected:</span> {item.protectedData}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(item)}>
                 <Settings2 className="h-3.5 w-3.5" />
               </Button>
-              <Switch defaultChecked={item.enabled} />
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(item.id!)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
         ))}
-        <div className="flex flex-col gap-1.5 mt-2">
+        
+        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={openAdd}>
+          <ShieldAlert className="h-4 w-4" />
+          Add Guardrail
+        </Button>
+
+        <Separator className="my-2" />
+
+        <div className="flex flex-col gap-1.5">
           <Label>Blocked Topics / Keywords</Label>
-          <Textarea rows={2} defaultValue="investments, legal advice, medical diagnosis" placeholder="Comma-separated topics the agent should refuse to discuss." />
+          <Textarea 
+            rows={2} 
+            value={blockedTopics}
+            onChange={(e) => setBlockedTopics(e.target.value)}
+            placeholder="Comma-separated topics the agent should refuse to discuss." 
+          />
+          <p className="text-xs text-muted-foreground">
+            These topics will trigger the off-topic deflection guardrail
+          </p>
         </div>
       </div>
+
+      <AddGuardrailDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        onSave={handleSave}
+        editingItem={editingItem}
+      />
     </ConfigSection>
   )
 }
 
 // ─── Section 11: Data Extraction ────────────────────────────────────────────
 function SectionDataExtraction() {
-  const [showAddField, setShowAddField] = useState(false)
-  const fields = [
-    { name: 'customer_name', type: 'String', required: true, confidence: 0.95 },
-    { name: 'customer_email', type: 'String', required: false, confidence: 0.85 },
-    { name: 'order_id', type: 'String', required: true, confidence: 0.92 },
-    { name: 'issue_category', type: 'Enum', required: true, confidence: 0.88 },
-    { name: 'sentiment', type: 'Enum', required: false, confidence: 0.75 },
-    { name: 'appointment_date', type: 'DateTime', required: false, confidence: 0.80 },
-  ]
+  const [showDialog, setShowDialog] = useState(false)
+  const [editingItem, setEditingItem] = useState<ExtractionField | null>(null)
+  const [fields, setFields] = useState<ExtractionField[]>([
+    { id: 'f1', name: 'customer_name', type: 'String', description: '', confidence: 95, lowConfidenceBehavior: 'clarify', required: true },
+    { id: 'f2', name: 'customer_email', type: 'String', description: '', confidence: 85, lowConfidenceBehavior: 'clarify', required: false },
+    { id: 'f3', name: 'order_id', type: 'String', description: '', confidence: 92, lowConfidenceBehavior: 'clarify', required: true },
+    { id: 'f4', name: 'issue_category', type: 'Enum', description: '', confidence: 88, lowConfidenceBehavior: 'review', required: true },
+    { id: 'f5', name: 'sentiment', type: 'Enum', description: '', confidence: 75, lowConfidenceBehavior: 'accept', required: false },
+    { id: 'f6', name: 'appointment_date', type: 'DateTime', description: '', confidence: 80, lowConfidenceBehavior: 'clarify', required: false },
+  ])
+
+  function openAdd() { setEditingItem(null); setShowDialog(true) }
+  function openEdit(field: ExtractionField) { setEditingItem(field); setShowDialog(true) }
+
+  function handleSave(field: ExtractionField) {
+    if (editingItem) {
+      setFields(prev => prev.map(f => f.id === editingItem.id ? { ...f, ...field } : f))
+    } else {
+      setFields(prev => [...prev, { ...field, id: `field-${Date.now()}` }])
+    }
+  }
+
+  function handleDelete(id: string) {
+    setFields(prev => prev.filter(f => f.id !== id))
+  }
 
   return (
     <ConfigSection title="Data Extraction" description="Define fields the agent should extract from conversations.">
       <div className="flex flex-col gap-3">
         {fields.map((field) => (
-          <div key={field.name} className="flex items-start gap-3 rounded-lg border border-border p-4">
+          <div key={field.id} className="flex items-start gap-3 rounded-lg border border-border p-4">
             <Database className="h-4 w-4 text-primary mt-0.5 shrink-0" />
             <div className="flex-1">
               <div className="flex items-center gap-2">
@@ -1294,97 +1410,56 @@ function SectionDataExtraction() {
                 {field.required && <Badge variant="outline" className="text-[10px] px-1.5 border-[var(--status-warning)]/30 text-[var(--status-warning)]">Required</Badge>}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Confidence threshold: {(field.confidence * 100).toFixed(0)}%
+                Confidence threshold: {field.confidence}%
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(field)}>
                 <Edit className="h-3.5 w-3.5" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive">
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(field.id!)}>
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
         ))}
-        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={() => setShowAddField(true)}>
+        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={openAdd}>
           <Database className="h-4 w-4" />
           Add Field
         </Button>
       </div>
 
-      <Dialog open={showAddField} onOpenChange={setShowAddField}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Extraction Field</DialogTitle>
-            <DialogDescription>Define a field to extract from conversations.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Field Name</Label>
-                <Input placeholder="e.g. customer_phone" className="font-mono text-xs" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Data Type</Label>
-                <Select defaultValue="string">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="string">String</SelectItem>
-                    <SelectItem value="number">Number</SelectItem>
-                    <SelectItem value="boolean">Boolean</SelectItem>
-                    <SelectItem value="date">Date / DateTime</SelectItem>
-                    <SelectItem value="enum">Enum</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldRow>
-            <div className="flex flex-col gap-1.5">
-              <Label>Description</Label>
-              <Textarea rows={2} placeholder="Describe what this field represents..." />
-            </div>
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Confidence Threshold</Label>
-                <Input type="number" defaultValue="80" min="0" max="100" />
-                <p className="text-xs text-muted-foreground">Minimum confidence to accept extraction</p>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Low Confidence Behavior</Label>
-                <Select defaultValue="clarify">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="accept">Accept anyway</SelectItem>
-                    <SelectItem value="clarify">Request clarification</SelectItem>
-                    <SelectItem value="review">Send for review</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldRow>
-            <div className="flex items-center gap-2">
-              <Switch />
-              <Label>Required field</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddField(false)}>Cancel</Button>
-            <Button>Add Field</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddExtractionFieldDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        onSave={handleSave}
+        editingItem={editingItem}
+      />
     </ConfigSection>
   )
 }
 
 // ─── Section 12: Post-Call Actions ──────────────────────────────────────────
 function SectionPostCallActions() {
-  const [showAddAction, setShowAddAction] = useState(false)
-  const actions = [
-    { id: 'update_crm', name: 'Update CRM', trigger: 'Call Completed', action: 'CRM Update', enabled: true },
-    { id: 'save_outcome', name: 'Save Call Outcome', trigger: 'Call Completed', action: 'Function', enabled: true },
-    { id: 'send_sms', name: 'Send SMS Follow-up', trigger: 'Specific Outcome', action: 'SMS', enabled: true },
-    { id: 'create_task', name: 'Create Follow-up Task', trigger: 'Extracted Field Condition', action: 'Task Creation', enabled: false },
-  ]
+  const [showDialog, setShowDialog] = useState(false)
+  const [editingItem, setEditingItem] = useState<PostCallAction | null>(null)
+  const [actions, setActions] = useState<PostCallAction[]>([
+    { id: 'pc1', name: 'Update CRM', actionType: 'CRM Update', trigger: 'Call Completed', payload: '{}', retryBehavior: '3', failureHandling: 'log' },
+    { id: 'pc2', name: 'Save Call Outcome', actionType: 'Function', trigger: 'Call Completed', payload: '{}', retryBehavior: '3', failureHandling: 'log' },
+    { id: 'pc3', name: 'Send SMS Follow-up', actionType: 'SMS', trigger: 'Specific Outcome', payload: '{}', retryBehavior: '3', failureHandling: 'alert' },
+    { id: 'pc4', name: 'Create Follow-up Task', actionType: 'Task Creation', trigger: 'Extracted Field Condition', payload: '{}', retryBehavior: '0', failureHandling: 'log' },
+  ])
+
+  function openAdd() { setEditingItem(null); setShowDialog(true) }
+  function openEdit(action: PostCallAction) { setEditingItem(action); setShowDialog(true) }
+
+  function handleSave(action: PostCallAction) {
+    if (editingItem) {
+      setActions(prev => prev.map(a => a.id === editingItem.id ? { ...a, ...action } : a))
+    } else {
+      setActions(prev => [...prev, { ...action, id: `postcall-${Date.now()}` }])
+    }
+  }
 
   return (
     <ConfigSection title="Post-Call Actions" description="Actions that execute after the call finishes.">
@@ -1395,141 +1470,146 @@ function SectionPostCallActions() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold">{action.name}</span>
-                <Badge variant="outline" className="text-[10px] px-1.5">{action.action}</Badge>
+                <Badge variant="outline" className="text-[10px] px-1.5">{action.actionType}</Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">Trigger: {action.trigger}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(action)}>
                 <Edit className="h-3.5 w-3.5" />
               </Button>
-              <Switch defaultChecked={action.enabled} />
+              <Switch defaultChecked />
             </div>
           </div>
         ))}
-        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={() => setShowAddAction(true)}>
+        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1" onClick={openAdd}>
           <Send className="h-4 w-4" />
           Add Post-Call Action
         </Button>
       </div>
 
-      <Dialog open={showAddAction} onOpenChange={setShowAddAction}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Post-Call Action</DialogTitle>
-            <DialogDescription>Define an action to execute after the call finishes.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Action Name</Label>
-                <Input placeholder="e.g. Schedule Callback" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Action Type</Label>
-                <Select defaultValue="crm-update">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="crm-update">CRM Update</SelectItem>
-                    <SelectItem value="function">Function</SelectItem>
-                    <SelectItem value="rest-api">REST API</SelectItem>
-                    <SelectItem value="webhook">Webhook</SelectItem>
-                    <SelectItem value="sms">SMS</SelectItem>
-                    <SelectItem value="task">Task Creation</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldRow>
-            <div className="flex flex-col gap-1.5">
-              <Label>Trigger</Label>
-              <Select defaultValue="call-completed">
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="call-completed">Call Completed</SelectItem>
-                  <SelectItem value="call-failed">Call Failed</SelectItem>
-                  <SelectItem value="specific-outcome">Specific Call Outcome</SelectItem>
-                  <SelectItem value="field-condition">Extracted Field Condition</SelectItem>
-                  <SelectItem value="confidence-condition">Confidence Condition</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Payload (JSON)</Label>
-              <Textarea
-                rows={6}
-                defaultValue={`{
-  "customer_name": "{{customer_name}}",
-  "order_id": "{{order_id}}",
-  "outcome": "{{call_outcome}}",
-  "sentiment": "{{sentiment}}"
-}`}
-                className="font-mono text-xs"
-              />
-              <p className="text-xs text-muted-foreground">Use {'{{field_name}}'} to reference extracted conversation fields.</p>
-            </div>
-            <FieldRow>
-              <div className="flex flex-col gap-1.5">
-                <Label>Retry Behavior</Label>
-                <Select defaultValue="3">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">No retry</SelectItem>
-                    <SelectItem value="3">3 retries</SelectItem>
-                    <SelectItem value="5">5 retries</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Failure Handling</Label>
-                <Select defaultValue="log">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="log">Log and continue</SelectItem>
-                    <SelectItem value="alert">Alert admin</SelectItem>
-                    <SelectItem value="retry-later">Retry later</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldRow>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddAction(false)}>Cancel</Button>
-            <Button>Add Action</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddPostCallActionDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        onSave={handleSave}
+        editingItem={editingItem}
+      />
     </ConfigSection>
   )
 }
 
 // ─── Section 13: Intelligence Layer (unchanged) ─────────────────────────────
 function SectionIntelligence() {
+  const [useConversationFlow, setUseConversationFlow] = useState(false)
+  const [selectedFlow, setSelectedFlow] = useState('')
+
+  const conversationFlows = [
+    { id: 'appointment-booking', name: 'Appointment Booking', description: 'Schedule appointments by collecting preferences and checking availability' },
+    { id: 'customer-support', name: 'Customer Support', description: 'Handle customer issues from identification to resolution' },
+    { id: 'lead-qualification', name: 'Lead Qualification', description: 'Qualify leads and determine next steps based on criteria' },
+    { id: 'payment-collection', name: 'Loan / Payment Collection', description: 'Collect outstanding payments through structured conversation' },
+    { id: 'complaint-handling', name: 'Complaint Handling', description: 'Handle customer complaints with appropriate escalation' },
+  ]
+
   return (
     <ConfigSection title="Intelligence Layer" description="Optional enhancements for advanced reasoning and analysis capabilities.">
-      <div className="flex flex-col gap-3">
-        {[
-          { label: 'Sentiment Analysis', desc: 'Detect caller sentiment in real-time and adjust agent tone accordingly.', enabled: true, badge: 'Beta' },
-          { label: 'Intent Classification', desc: 'Classify caller intent at the start of each turn to route conversation flow.', enabled: true, badge: null },
-          { label: 'Entity Extraction', desc: 'Automatically extract dates, names, order IDs, and other structured data from speech.', enabled: false, badge: null },
-          { label: 'Call Summarization', desc: 'Generate a structured summary and action items at the end of each call.', enabled: true, badge: null },
-          { label: 'Real-time Coaching', desc: 'Provide live suggestions to human agents based on ongoing conversation context.', enabled: false, badge: 'Preview' },
-          { label: 'Churn Prediction', desc: 'Flag calls where caller behavior suggests high churn risk.', enabled: false, badge: 'Preview' },
-        ].map((item) => (
-          <div key={item.label} className="flex items-center justify-between rounded-lg border border-border p-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium">{item.label}</p>
-                {item.badge && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 border-[var(--status-warning)]/30 text-[var(--status-warning)]">
-                    {item.badge}
-                  </Badge>
-                )}
+      <div className="flex flex-col gap-4">
+        {/* Conversation Flow Toggle */}
+        <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <Workflow className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold">Use Conversation Flow</p>
               </div>
-              <p className="text-xs text-muted-foreground">{item.desc}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Enable structured conversation patterns for this agent. When enabled, the agent will follow the selected flow pattern while still using its configured tools, knowledge, and capabilities.
+              </p>
             </div>
-            <Switch defaultChecked={item.enabled} />
+            <Switch 
+              checked={useConversationFlow} 
+              onCheckedChange={setUseConversationFlow}
+            />
           </div>
-        ))}
+
+          {/* Flow Selection Dropdown */}
+          {useConversationFlow && (
+            <div className="mt-4 pt-4 border-t border-primary/20">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium">Select Conversation Flow Pattern</Label>
+                <Select value={selectedFlow} onValueChange={(v) => v && setSelectedFlow(v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a conversation pattern..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {conversationFlows.map((flow) => (
+                      <SelectItem key={flow.id} value={flow.id}>
+                        <div className="flex flex-col gap-0.5 py-1">
+                          <span className="font-medium">{flow.name}</span>
+                          <span className="text-[11px] text-muted-foreground">{flow.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  {selectedFlow 
+                    ? `Selected: ${conversationFlows.find(f => f.id === selectedFlow)?.name}`
+                    : 'Select a reusable conversation pattern for this agent'}
+                </p>
+              </div>
+
+              {selectedFlow && (
+                <div className="mt-3 rounded-md border border-border bg-muted/30 p-3">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                    <div className="text-[11px] text-muted-foreground leading-relaxed">
+                      <p className="font-medium text-foreground mb-1">How it works:</p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        <li>The agent will follow the selected flow pattern</li>
+                        <li>Natural conversation happens within each stage</li>
+                        <li>Agent uses configured tools, knowledge, and rules</li>
+                        <li>Flow can be changed or disabled at any time</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Intelligence Features */}
+        <div className="flex flex-col gap-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Advanced Intelligence Features
+          </p>
+          {[
+            { label: 'Sentiment Analysis', desc: 'Detect caller sentiment in real-time and adjust agent tone accordingly.', enabled: true, badge: 'Beta' },
+            { label: 'Intent Classification', desc: 'Classify caller intent at the start of each turn to route conversation flow.', enabled: true, badge: null },
+            { label: 'Entity Extraction', desc: 'Automatically extract dates, names, order IDs, and other structured data from speech.', enabled: false, badge: null },
+            { label: 'Call Summarization', desc: 'Generate a structured summary and action items at the end of each call.', enabled: true, badge: null },
+            { label: 'Real-time Coaching', desc: 'Provide live suggestions to human agents based on ongoing conversation context.', enabled: false, badge: 'Preview' },
+            { label: 'Churn Prediction', desc: 'Flag calls where caller behavior suggests high churn risk.', enabled: false, badge: 'Preview' },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center justify-between rounded-lg border border-border p-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">{item.label}</p>
+                  {item.badge && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 border-[var(--status-warning)]/30 text-[var(--status-warning)]">
+                      {item.badge}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{item.desc}</p>
+              </div>
+              <Switch defaultChecked={item.enabled} />
+            </div>
+          ))}
+        </div>
       </div>
     </ConfigSection>
   )

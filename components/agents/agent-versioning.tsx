@@ -93,7 +93,7 @@ export function AgentVersioning({ agent }: { agent: Agent }) {
                             Rollback
                           </Button>
                         )}
-                        <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" render={<Link href={`/agents/${agent.id}/config`} />}>
+                        <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" render={<Link href={`/agents/${agent.id}/config`} />} nativeButton={false} >
                           View Config
                         </Button>
                       </div>

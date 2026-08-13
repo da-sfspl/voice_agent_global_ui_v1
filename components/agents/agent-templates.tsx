@@ -19,6 +19,8 @@ import {
   ChevronRight,
 } from 'lucide-react'
 
+import Link from 'next/link'
+
 const typeIcon: Record<AgentTemplate['type'], React.ElementType> = {
   inbound: PhoneIncoming,
   outbound: PhoneOutgoing,
@@ -198,13 +200,24 @@ export function AgentTemplates() {
             </div>
 
             <Separator />
-
+            
             <div className="flex flex-col gap-2">
-              <Button size="sm" className="w-full gap-2">
+              <Button 
+                size="sm" 
+                className="w-full gap-2" 
+                render={<Link href={`/agents/new?template=${selected.id}&mode=create`} />}
+                nativeButton={false}
+              >
                 <Bot className="h-4 w-4" />
                 Create Agent from Template
               </Button>
-              <Button variant="outline" size="sm" className="w-full gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full gap-2"
+                render={<Link href={`/agents/new?template=${selected.id}&mode=preview`} />}
+                nativeButton={false}
+              >
                 <ChevronRight className="h-4 w-4" />
                 Preview Template
               </Button>

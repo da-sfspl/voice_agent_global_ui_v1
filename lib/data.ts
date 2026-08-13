@@ -1,3 +1,8 @@
+import type { ToolItem } from '@/components/agents/dialogs/add-tool-dialog'
+import type { RuleItem } from '@/components/agents/dialogs/add-rule-dialog'
+import type { GuardrailItem } from '@/components/agents/dialogs/add-guardrail-dialog'
+
+
 // ─── Shared dummy data for the Voice AI Agent Platform ────────────────────────
 
 export type Status = 'active' | 'inactive' | 'draft' | 'paused' | 'error'
@@ -294,26 +299,170 @@ export const agentVersions: AgentVersion[] = [
   { version: '2.5.0', status: 'archived', deployedAt: '2026-05-01T09:00:00Z', deployedBy: 'Sara Miller', notes: 'Added knowledge base KB-002. Refactored conversation flow.', calls: 18700 },
 ]
 
+
+// 1. Define the extended configuration type
+export type AgentTemplateConfig = {
+  instructions: {
+    role: string
+    objective: string
+    behavior: string
+    tone: string
+    constraints: string
+    welcome: string
+    fallback: string
+  }
+  providers: {
+    llmProvider: string
+    llmModel: string
+    sttProvider: string
+    ttsProvider: string
+    temperature: number
+    contextWindow: string
+  }
+  voice: {
+    speed: number
+    stability: number
+    similarityBoost: number
+    emotion: string
+    interruptHandling: boolean
+    silenceDetection: boolean
+  }
+  memory: {
+    enabled: boolean
+    scope: string
+    ttlDays: number
+  }
+  tools: ToolItem[]
+  rules: RuleItem[]
+  guardrails: GuardrailItem[]
+  intelligence: {
+    useFlow: boolean
+    flowId: string
+    sentiment: boolean
+    intent: boolean
+    summarization: boolean
+  }
+}
+
+// 2. Update the AgentTemplate type to include the config
 export type AgentTemplate = {
   id: string
   name: string
   category: string
   description: string
-  type: AgentType
+  type: 'inbound' | 'outbound' | 'hybrid'
   llmModel: string
   voice: string
   language: string
   useCount: number
   tags: string[]
+  config: AgentTemplateConfig 
 }
 
+// 3. Update the mock data array
 export const agentTemplates: AgentTemplate[] = [
-  { id: 'tpl-001', name: 'Customer Support — E-Commerce', category: 'Support', description: 'Ready-to-use inbound support agent with order lookup, FAQ, and escalation flows.', type: 'inbound', llmModel: 'gpt-4o', voice: 'Rachel', language: 'en-US', useCount: 42, tags: ['support', 'e-commerce'] },
-  { id: 'tpl-002', name: 'Outbound Sales Qualifier', category: 'Sales', description: 'Lead qualification script with BANT framework, objection handling, and CRM sync.', type: 'outbound', llmModel: 'claude-3.5-sonnet', voice: 'Aria', language: 'en-US', useCount: 28, tags: ['sales', 'outreach'] },
-  { id: 'tpl-003', name: 'Healthcare Appointment', category: 'Scheduling', description: 'HIPAA-aware scheduling agent with calendar integration and reminder flows.', type: 'hybrid', llmModel: 'gpt-4o-mini', voice: 'Dorothy', language: 'en-US', useCount: 19, tags: ['healthcare', 'scheduling'] },
-  { id: 'tpl-004', name: 'Collections & Payment Reminder', category: 'Finance', description: 'Compliant outbound collections agent with payment plan negotiation flows.', type: 'outbound', llmModel: 'gpt-4o', voice: 'James', language: 'en-US', useCount: 11, tags: ['collections', 'finance'] },
-  { id: 'tpl-005', name: 'IT Help Desk', category: 'Internal', description: 'Internal IT support triage agent for common issues, resets, and ticket creation.', type: 'inbound', llmModel: 'claude-3-haiku', voice: 'Studio-O', language: 'en-US', useCount: 15, tags: ['it', 'internal'] },
-  { id: 'tpl-006', name: 'Survey & Feedback Collector', category: 'Engagement', description: 'Post-call CSAT and NPS survey agent with branching logic and webhook export.', type: 'outbound', llmModel: 'gpt-4o-mini', voice: 'Elli', language: 'en-US', useCount: 9, tags: ['survey', 'engagement'] },
+  {
+    id: 'tpl-001',
+    name: 'Customer Support — E-Commerce',
+    category: 'Support',
+    description: 'Ready-to-use inbound support agent with order lookup, FAQ, and escalation flows.',
+    type: 'inbound',
+    llmModel: 'gpt-4o',
+    voice: 'Rachel',
+    language: 'en-US',
+    useCount: 42,
+    tags: ['support', 'e-commerce'],
+    config: {
+      instructions: {
+        role: 'E-Commerce Customer Support Agent',
+        objective: 'Resolve order inquiries, process returns, and answer product questions efficiently.',
+        behavior: 'Be empathetic, patient, and solution-oriented. Always verify the order number before discussing details.',
+        tone: 'professional-friendly',
+        constraints: 'Never issue refunds over $100 without manager approval. Do not share other customers\' data.',
+        welcome: 'Thank you for calling Acme Store! My name is Alex. How can I help you with your order today?',
+        fallback: 'I\'m sorry, I didn\'t quite catch that. Could you please repeat your order number or question?',
+      },
+      providers: {
+        llmProvider: 'openai',
+        llmModel: 'gpt-4o',
+        sttProvider: 'deepgram',
+        ttsProvider: 'elevenlabs',
+        temperature: 0.3,
+        contextWindow: '16384',
+      },
+      voice: { speed: 1.0, stability: 0.6, similarityBoost: 0.8, emotion: 'empathetic', interruptHandling: true, silenceDetection: true },
+      memory: { enabled: true, scope: 'caller', ttlDays: 90 },
+      tools: [
+        { id: 't1', name: 'lookup_order', description: 'Look up order status by ID', type: 'REST API', endpoint: '/api/orders' },
+        { id: 't2', name: 'process_return', description: 'Initiate a return request', type: 'REST API', endpoint: '/api/returns' },
+        { id: 't3', name: 'transfer_call', description: 'Transfer to human agent', type: 'Built-in' },
+      ],
+      rules: [
+        { id: 'r1', name: 'High Value Refund', description: '', priority: 1, conditionType: 'field', conditionDetails: 'refund_amount > 100', actionType: 'transfer', actionConfig: 'Manager Queue' },
+        { id: 'r2', name: 'Human Request', description: '', priority: 2, conditionType: 'caller-request', conditionDetails: 'Requests human', actionType: 'transfer', actionConfig: 'Support Queue' },
+      ],
+      guardrails: [
+        { id: 'g1', label: 'Block PII', description: 'Prevent SSN collection', action: 'Refuse', detectionCondition: '', protectedData: 'SSN', responseBehavior: 'apologize', enabled: true },
+      ],
+      intelligence: { useFlow: true, flowId: 'customer-support', sentiment: true, intent: true, summarization: true },
+    }
+  },
+  {
+    id: 'tpl-002',
+    name: 'Outbound Sales Qualifier',
+    category: 'Sales',
+    description: 'Lead qualification script with BANT framework, objection handling, and CRM sync.',
+    type: 'outbound',
+    llmModel: 'claude-3.5-sonnet',
+    voice: 'Aria',
+    language: 'en-US',
+    useCount: 28,
+    tags: ['sales', 'outreach'],
+    config: {
+      instructions: { role: 'Sales Qualification Agent', objective: 'Qualify leads using BANT framework and book demos.', behavior: 'Be energetic, persuasive, and respectful of time.', tone: 'professional-friendly', constraints: 'Never promise specific pricing without a formal quote.', welcome: 'Hi, this is Alex calling from Acme Corp. Am I speaking with {{customer_name}}?', fallback: 'Sorry, the connection was a bit unclear. Could you repeat that?' },
+      providers: { llmProvider: 'anthropic', llmModel: 'claude-3.5-sonnet', sttProvider: 'deepgram', ttsProvider: 'azure', temperature: 0.5, contextWindow: '32768' },
+      voice: { speed: 1.05, stability: 0.5, similarityBoost: 0.7, emotion: 'energetic', interruptHandling: true, silenceDetection: true },
+      memory: { enabled: true, scope: 'caller', ttlDays: 30 },
+      tools: [{ id: 't1', name: 'check_crm', description: 'Check CRM status', type: 'REST API' }, { id: 't2', name: 'book_demo', description: 'Book calendar demo', type: 'REST API' }],
+      rules: [{ id: 'r1', name: 'Not Interested', description: '', priority: 1, conditionType: 'intent', conditionDetails: 'Not interested', actionType: 'end', actionConfig: '' }],
+      guardrails: [{ id: 'g1', label: 'Competitor Mention', description: 'Handle competitor mentions gracefully', action: 'Redact', detectionCondition: '', protectedData: '', responseBehavior: 'clarify', enabled: true }],
+      intelligence: { useFlow: true, flowId: 'lead-qualification', sentiment: true, intent: true, summarization: true },
+    }
+  },
+  {
+    id: 'tpl-003',
+    name: 'Healthcare Appointment',
+    category: 'Scheduling',
+    description: 'HIPAA-aware scheduling agent with calendar integration and reminder flows.',
+    type: 'hybrid',
+    llmModel: 'gpt-4o-mini',
+    voice: 'Dorothy',
+    language: 'en-US',
+    useCount: 19,
+    tags: ['healthcare', 'scheduling'],
+    config: {
+      instructions: { role: 'Healthcare Scheduling Agent', objective: 'Book, reschedule, and cancel medical appointments.', behavior: 'Be highly professional, empathetic, and strictly adhere to HIPAA guidelines.', tone: 'professional-formal', constraints: 'NEVER discuss specific medical diagnoses or symptoms over the phone. Only confirm appointment times.', welcome: 'Thank you for calling Acme Health Clinic. How may I assist you with your scheduling today?', fallback: 'I apologize, could you please repeat that so I can ensure I have the correct information?' },
+      providers: { llmProvider: 'openai', llmModel: 'gpt-4o-mini', sttProvider: 'azure', ttsProvider: 'elevenlabs', temperature: 0.2, contextWindow: '8192' },
+      voice: { speed: 0.95, stability: 0.8, similarityBoost: 0.9, emotion: 'empathetic', interruptHandling: false, silenceDetection: true },
+      memory: { enabled: true, scope: 'caller', ttlDays: 365 },
+      tools: [{ id: 't1', name: 'check_availability', description: 'Check doctor availability', type: 'REST API' }, { id: 't2', name: 'book_appointment', description: 'Book appointment', type: 'REST API' }],
+      rules: [{ id: 'r1', name: 'Medical Question', description: '', priority: 1, conditionType: 'intent', conditionDetails: 'Asks medical advice', actionType: 'transfer', actionConfig: 'Nurse Triage' }],
+      guardrails: [{ id: 'g1', label: 'HIPAA Compliance', description: 'Block PHI disclosure', action: 'Refuse', detectionCondition: '', protectedData: 'PHI, diagnoses', responseBehavior: 'escalate', enabled: true }],
+      intelligence: { useFlow: true, flowId: 'appointment-booking', sentiment: false, intent: true, summarization: true },
+    }
+  },
+  {
+    id: 'tpl-004', name: 'Collections & Payment Reminder', category: 'Finance', description: 'Compliant outbound collections agent with payment plan negotiation flows.', type: 'outbound', llmModel: 'gpt-4o', voice: 'James', language: 'en-US', useCount: 11, tags: ['collections', 'finance'],
+    config: { instructions: { role: 'Collections Agent', objective: 'Secure payment commitments.', behavior: 'Be firm but polite. Follow FDCPA guidelines strictly.', tone: 'professional-formal', constraints: 'Never use threatening language. Do not call before 8 AM or after 9 PM.', welcome: 'Hello, this is Alex from Acme Financial. May I speak with {{customer_name}}?', fallback: 'Could you please repeat that?' }, providers: { llmProvider: 'openai', llmModel: 'gpt-4o', sttProvider: 'deepgram', ttsProvider: 'elevenlabs', temperature: 0.2, contextWindow: '8192' }, voice: { speed: 1.0, stability: 0.7, similarityBoost: 0.8, emotion: 'neutral', interruptHandling: true, silenceDetection: true }, memory: { enabled: true, scope: 'caller', ttlDays: 90 }, tools: [{ id: 't1', name: 'get_balance', description: 'Get account balance', type: 'REST API' }, { id: 't2', name: 'process_payment', description: 'Process payment', type: 'REST API' }], rules: [{ id: 'r1', name: 'Dispute', description: '', priority: 1, conditionType: 'intent', conditionDetails: 'Disputes debt', actionType: 'transfer', actionConfig: 'Compliance Queue' }], guardrails: [{ id: 'g1', label: 'FDCPA Compliance', description: 'Block threatening language', action: 'Refuse', detectionCondition: '', protectedData: '', responseBehavior: 'escalate', enabled: true }], intelligence: { useFlow: true, flowId: 'payment-collection', sentiment: true, intent: true, summarization: true } }
+  },
+  {
+    id: 'tpl-005', name: 'IT Help Desk', category: 'Internal', description: 'Internal IT support triage agent for common issues, resets, and ticket creation.', type: 'inbound', llmModel: 'claude-3-haiku', voice: 'Studio-O', language: 'en-US', useCount: 15, tags: ['it', 'internal'],
+    config: { instructions: { role: 'IT Help Desk Agent', objective: 'Triage and resolve internal IT issues.', behavior: 'Be concise, technical, and efficient.', tone: 'professional-friendly', constraints: 'Do not share admin passwords. Escalate network outages immediately.', welcome: 'IT Help Desk, this is Alex. What issue are you experiencing?', fallback: 'Could you clarify the error message you are seeing?' }, providers: { llmProvider: 'anthropic', llmModel: 'claude-3-haiku', sttProvider: 'deepgram', ttsProvider: 'google', temperature: 0.3, contextWindow: '16384' }, voice: { speed: 1.1, stability: 0.6, similarityBoost: 0.7, emotion: 'neutral', interruptHandling: true, silenceDetection: true }, memory: { enabled: false, scope: 'session', ttlDays: 1 }, tools: [{ id: 't1', name: 'reset_password', description: 'Reset AD password', type: 'Built-in' }, { id: 't2', name: 'create_ticket', description: 'Create Jira ticket', type: 'REST API' }], rules: [{ id: 'r1', name: 'Network Outage', description: '', priority: 1, conditionType: 'intent', conditionDetails: 'Reports network down', actionType: 'transfer', actionConfig: 'NOC Team' }], guardrails: [{ id: 'g1', label: 'Admin Access', description: 'Block admin requests', action: 'Refuse', detectionCondition: '', protectedData: 'Admin passwords', responseBehavior: 'escalate', enabled: true }], intelligence: { useFlow: true, flowId: 'customer-support', sentiment: false, intent: true, summarization: true } }
+  },
+  {
+    id: 'tpl-006', name: 'Survey & Feedback Collector', category: 'Engagement', description: 'Post-call CSAT and NPS survey agent with branching logic and webhook export.', type: 'outbound', llmModel: 'gpt-4o-mini', voice: 'Elli', language: 'en-US', useCount: 9, tags: ['survey', 'engagement'],
+    config: { instructions: { role: 'Survey Agent', objective: 'Collect CSAT and NPS scores.', behavior: 'Be brief, polite, and appreciative of their time.', tone: 'casual', constraints: 'Do not argue with negative feedback. Just record it.', welcome: 'Hi {{customer_name}}, this is a quick follow-up from Acme Corp. Do you have 2 minutes for a quick survey?', fallback: 'Sorry, could you repeat your rating?' }, providers: { llmProvider: 'openai', llmModel: 'gpt-4o-mini', sttProvider: 'deepgram', ttsProvider: 'elevenlabs', temperature: 0.4, contextWindow: '4096' }, voice: { speed: 1.0, stability: 0.5, similarityBoost: 0.8, emotion: 'friendly', interruptHandling: false, silenceDetection: true }, memory: { enabled: false, scope: 'session', ttlDays: 1 }, tools: [{ id: 't1', name: 'save_survey', description: 'Save survey results', type: 'REST API' }], rules: [{ id: 'r1', name: 'Low Score', description: '', priority: 1, conditionType: 'field', conditionDetails: 'csat_score <= 2', actionType: 'invoke', actionConfig: 'alert_manager' }], guardrails: [], intelligence: { useFlow: false, flowId: '', sentiment: true, intent: false, summarization: true } }
+  },
 ]
 
 export type KnowledgeBase = {

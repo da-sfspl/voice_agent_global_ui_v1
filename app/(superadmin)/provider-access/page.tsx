@@ -2,561 +2,400 @@
 
 import { useState, useMemo } from 'react'
 import {
-  Search, ShieldCheck, Lock, Users, Building2, Activity, Zap, X, AlertTriangle, Info
+  Search, Building2, ShieldCheck, Lock, Save, CheckCircle2, Info, Brain, Mic2, Volume2, ChevronDown
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from '@/components/ui/table'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
-} from '@/components/ui/dialog'
+import { Separator } from '@/components/ui/separator'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type ServiceType = 'LLM' | 'STT' | 'TTS'
-type OrgStatus = 'active' | 'suspended'
 
 type Organization = {
   id: string
   name: string
-  status: OrgStatus
+  status: 'active' | 'suspended'
+  plan: string
+  agentsCount: number
 }
 
 // ─── Provider catalog by service type ──────────────────────────────────────
 const providerCatalog: Record<ServiceType, string[]> = {
-  LLM: ['OpenAI', 'Anthropic', 'Google Vertex', 'Mistral', 'Meta'],
-  STT: ['Deepgram', 'Sarvam AI', 'Smallest AI', 'Azure Speech', 'Google Speech'],
+  LLM: ['OpenAI', 'Anthropic', 'Google Gemini', 'Mistral', 'Meta'],
+  STT: ['Deepgram', 'Sarvam AI', 'Azure Speech', 'Smallest AI', 'Google Speech'],
   TTS: ['Cartesia', 'ElevenLabs', 'Azure Speech', 'Google Cloud TTS', 'PlayHT'],
+}
+
+// ─── Service config for styling ────────────────────────────────────────────
+const serviceConfig: Record<ServiceType, { icon: React.ElementType; color: string; badgeClass: string }> = {
+  LLM: { icon: Brain, color: 'text-purple-500', badgeClass: 'border-purple-500/30 text-purple-500 bg-purple-500/5' },
+  STT: { icon: Mic2, color: 'text-blue-500', badgeClass: 'border-blue-500/30 text-blue-500 bg-blue-500/5' },
+  TTS: { icon: Volume2, color: 'text-green-500', badgeClass: 'border-green-500/30 text-green-500 bg-green-500/5' },
+}
+
+// ─── Platform-wide provider status ─────────────────────────────────────────
+const platformProviderStatus: Record<string, 'available' | 'degraded' | 'maintenance'> = {
+  'OpenAI': 'available',
+  'Anthropic': 'available',
+  'Google Gemini': 'available',
+  'Mistral': 'available',
+  'Meta': 'maintenance',
+  'Deepgram': 'available',
+  'Sarvam AI': 'degraded',
+  'Azure Speech': 'available',
+  'Smallest AI': 'available',
+  'Google Speech': 'available',
+  'Cartesia': 'available',
+  'ElevenLabs': 'available',
+  'Google Cloud TTS': 'available',
+  'PlayHT': 'degraded',
 }
 
 // ─── Organizations ─────────────────────────────────────────────────────────
 const organizations: Organization[] = [
-  { id: 'org-001', name: 'Acme Corporation', status: 'active' },
-  { id: 'org-002', name: 'Nova Healthcare', status: 'active' },
-  { id: 'org-003', name: 'Zenith Finance', status: 'active' },
-  { id: 'org-004', name: 'Bright Retail', status: 'active' },
-  { id: 'org-005', name: 'Vertex Logistics', status: 'suspended' },
-  { id: 'org-006', name: 'Stellar Media', status: 'active' },
-  { id: 'org-007', name: 'Horizon Bank', status: 'active' },
-  { id: 'org-008', name: 'Pulse Fitness', status: 'active' },
-  { id: 'org-009', name: 'Cobalt Legal', status: 'active' },
-  { id: 'org-010', name: 'Nimbus Travel', status: 'active' },
+  { id: 'org-001', name: 'ACME Corp', status: 'active', plan: 'Enterprise', agentsCount: 24 },
+  { id: 'org-002', name: 'NovaStack', status: 'active', plan: 'Professional', agentsCount: 12 },
+  { id: 'org-003', name: 'Zenith Finance', status: 'active', plan: 'Enterprise', agentsCount: 18 },
+  { id: 'org-004', name: 'Bright Retail', status: 'active', plan: 'Professional', agentsCount: 8 },
+  { id: 'org-005', name: 'Vertex Logistics', status: 'suspended', plan: 'Starter', agentsCount: 0 },
+  { id: 'org-006', name: 'Stellar Media', status: 'active', plan: 'Professional', agentsCount: 15 },
 ]
 
-// ─── Provider details (informational only) ─────────────────────────────────
-const providerDetails: Record<string, { models: number; status: string }> = {
-  'OpenAI': { models: 6, status: 'Platform Enabled' },
-  'Anthropic': { models: 4, status: 'Platform Enabled' },
-  'Google Vertex': { models: 3, status: 'Platform Enabled' },
-  'Mistral': { models: 3, status: 'Platform Enabled' },
-  'Meta': { models: 2, status: 'Platform Enabled' },
-  'Deepgram': { models: 4, status: 'Platform Enabled' },
-  'Sarvam AI': { models: 2, status: 'Platform Enabled' },
-  'Smallest AI': { models: 2, status: 'Platform Enabled' },
-  'Azure Speech': { models: 5, status: 'Platform Enabled' },
-  'Google Speech': { models: 3, status: 'Platform Enabled' },
-  'Cartesia': { models: 2, status: 'Platform Enabled' },
-  'ElevenLabs': { models: 5, status: 'Platform Enabled' },
-  'Google Cloud TTS': { models: 4, status: 'Platform Enabled' },
-  'PlayHT': { models: 3, status: 'Platform Enabled' },
-}
+// ─── Build initial access state ────────────────────────────────────────────
+function buildInitialAccessState(): Record<string, Record<string, boolean>> {
+  const state: Record<string, Record<string, boolean>> = {}
 
-// ─── Last updated timestamps (static for demo) ─────────────────────────────
-const lastUpdatedMap: Record<string, string> = {
-  'org-001': '2 hours ago',
-  'org-002': '1 day ago',
-  'org-003': '3 days ago',
-  'org-004': '5 hours ago',
-  'org-005': '1 week ago',
-  'org-006': '6 hours ago',
-  'org-007': '2 days ago',
-  'org-008': '4 days ago',
-  'org-009': '8 hours ago',
-  'org-010': '3 days ago',
-}
-
-// ─── Deterministic helpers for realistic dummy usage ──────────────────────
-function hashStr(str: string): number {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash * 31 + str.charCodeAt(i)) >>> 0
-  }
-  return hash
-}
-
-function getUsage(provider: string, orgId: string): number {
-  return (hashStr(provider + orgId) % 500000) + 10000
-}
-
-function getAgentCount(provider: string, orgId: string): number {
-  return (hashStr(orgId + provider) % 12) + 1
-}
-
-function formatUsage(n: number): string {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return String(n)
-}
-
-// ─── Build initial access map (provider → orgId → boolean) ─────────────────
-function buildInitialAccess(): Record<string, Record<string, boolean>> {
-  const access: Record<string, Record<string, boolean>> = {}
-  const allProviders = [
-    ...providerCatalog.LLM,
-    ...providerCatalog.STT,
-    ...providerCatalog.TTS,
-  ]
-  const deniedByDefault = new Set(['org-005']) // Suspended org has no access
-
-  allProviders.forEach(provider => {
-    access[provider] = {}
-    organizations.forEach(org => {
-      access[provider][org.id] = !deniedByDefault.has(org.id)
+  organizations.forEach(org => {
+    state[org.id] = {}
+    const allProviders = [
+      ...providerCatalog.LLM,
+      ...providerCatalog.STT,
+      ...providerCatalog.TTS,
+    ]
+    allProviders.forEach(provider => {
+      state[org.id][provider] = true
     })
   })
 
-  // Realistic overrides
-  access['OpenAI']['org-003'] = false
-  access['Anthropic']['org-002'] = false
-  access['Anthropic']['org-007'] = false
-  access['Meta']['org-001'] = false
-  access['Meta']['org-002'] = false
-  access['Meta']['org-004'] = false
-  access['PlayHT']['org-003'] = false
-  access['PlayHT']['org-006'] = false
-  access['Sarvam AI']['org-007'] = false
+  // Realistic disabled states
+  state['org-001']['Google Gemini'] = false
+  state['org-001']['Meta'] = false
+  state['org-001']['PlayHT'] = false
 
-  return access
+  state['org-002']['Anthropic'] = false
+  state['org-002']['Sarvam AI'] = false
+  state['org-002']['ElevenLabs'] = false
+
+  state['org-003']['Meta'] = false
+  state['org-003']['PlayHT'] = false
+  state['org-003']['Smallest AI'] = false
+
+  state['org-004']['Mistral'] = false
+  state['org-004']['Smallest AI'] = false
+  state['org-004']['Google Cloud TTS'] = false
+
+  state['org-005']['OpenAI'] = false
+  state['org-005']['Anthropic'] = false
+  state['org-005']['Google Gemini'] = false
+  state['org-005']['Mistral'] = false
+  state['org-005']['Meta'] = false
+  state['org-005']['Deepgram'] = false
+  state['org-005']['Sarvam AI'] = false
+  state['org-005']['Cartesia'] = false
+  state['org-005']['ElevenLabs'] = false
+
+  state['org-006']['Meta'] = false
+  state['org-006']['Google Cloud TTS'] = false
+  state['org-006']['PlayHT'] = false
+
+  return state
 }
 
-// ─── Pending confirmation action ───────────────────────────────────────────
-type ConfirmAction = {
-  type: 'single' | 'bulk'
-  orgIds: string[]
-  enable: boolean
-}
+// ─── Main Component ────────────────────────────────────────────────────────
+export default function OrgProviderAccessPage() {
+  const [selectedOrgId, setSelectedOrgId] = useState<string>(organizations[0].id)
+  const [serviceFilter, setServiceFilter] = useState<'all' | ServiceType>('all')
+  const [providerSearch, setProviderSearch] = useState('')
+  const [accessState, setAccessState] = useState(buildInitialAccessState())
+  const [isSaved, setIsSaved] = useState(false)
 
-// ─── Main component ────────────────────────────────────────────────────────
-export default function ProviderAccessControlPage() {
-  const [service, setService] = useState<ServiceType>('LLM')
-  const [provider, setProvider] = useState('OpenAI')
-  const [accessMap, setAccessMap] = useState<Record<string, Record<string, boolean>>>(buildInitialAccess())
+  // ── Get selected organization ──
+  const selectedOrg = organizations.find(o => o.id === selectedOrgId)
+  const orgAccess = accessState[selectedOrgId] || {}
 
-  // Filters
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [accessFilter, setAccessFilter] = useState('all')
+  // ── Visible services ──
+  const visibleServices: ServiceType[] = useMemo(() => {
+    if (serviceFilter === 'all') return ['LLM', 'STT', 'TTS']
+    return [serviceFilter]
+  }, [serviceFilter])
 
-  // Bulk selection
-  const [selectedOrgs, setSelectedOrgs] = useState<Set<string>>(new Set())
-
-  // Confirmation dialog
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
-
-  const providerAccess = accessMap[provider] || {}
-
-  // ── Service change: reset provider & selection ──
-  function handleServiceChange(s: ServiceType) {
-    setService(s)
-    setProvider(providerCatalog[s][0])
-    setSelectedOrgs(new Set())
+  // ── Toggle provider ──
+  function handleToggle(provider: string, newValue: boolean) {
+    setAccessState(prev => ({
+      ...prev,
+      [selectedOrgId]: {
+        ...prev[selectedOrgId],
+        [provider]: newValue,
+      },
+    }))
+    setIsSaved(false)
   }
 
-  // ── Filtered organizations ──
-  const filteredOrgs = useMemo(() => {
-    return organizations.filter(org => {
-      const matchSearch = org.name.toLowerCase().includes(search.toLowerCase())
-      const matchStatus = statusFilter === 'all' || org.status === statusFilter
-      const hasAccess = !!providerAccess[org.id]
-      const matchAccess =
-        accessFilter === 'all' ||
-        (accessFilter === 'enabled' && hasAccess) ||
-        (accessFilter === 'disabled' && !hasAccess)
-      return matchSearch && matchStatus && matchAccess
-    })
-  }, [search, statusFilter, accessFilter, providerAccess])
-
-  // ── Summary stats ──
-  const stats = useMemo(() => {
-    const withAccess = organizations.filter(o => providerAccess[o.id]).length
-    const withoutAccess = organizations.length - withAccess
-    const activeOrgs = organizations.filter(o => o.status === 'active').length
-    const totalUsage = organizations.reduce(
-      (sum, o) => (providerAccess[o.id] ? sum + getUsage(provider, o.id) : sum),
-      0
-    )
-    return { withAccess, withoutAccess, activeOrgs, totalUsage }
-  }, [providerAccess, provider])
-
-  // ── Apply access changes ──
-  function applyAccess(orgIds: string[], enable: boolean) {
-    setAccessMap(prev => {
-      const updated = { ...prev }
-      updated[provider] = { ...updated[provider] }
-      orgIds.forEach(id => {
-        updated[provider][id] = enable
-      })
-      return updated
-    })
+  // ── Save ──
+  function handleSave() {
+    setIsSaved(true)
+    setTimeout(() => setIsSaved(false), 3000)
   }
 
-  // ── Single toggle ──
-  function handleToggle(orgId: string, newValue: boolean) {
-    if (newValue) {
-      applyAccess([orgId], true) // Enable: no confirmation needed
-    } else {
-      setConfirmAction({ type: 'single', orgIds: [orgId], enable: false })
-    }
-  }
-
-  // ── Confirm pending action ──
-  function confirmPending() {
-    if (!confirmAction) return
-    applyAccess(confirmAction.orgIds, confirmAction.enable)
-    if (confirmAction.type === 'bulk') setSelectedOrgs(new Set())
-    setConfirmAction(null)
-  }
-
-  // ── Bulk actions ──
-  function handleBulkEnable() {
-    applyAccess([...selectedOrgs], true)
-    setSelectedOrgs(new Set())
-  }
-
-  function handleBulkDisable() {
-    setConfirmAction({ type: 'bulk', orgIds: [...selectedOrgs], enable: false })
-  }
-
-  // ── Selection helpers ──
-  function toggleSelect(orgId: string) {
-    setSelectedOrgs(prev => {
-      const next = new Set(prev)
-      if (next.has(orgId)) next.delete(orgId)
-      else next.add(orgId)
-      return next
-    })
-  }
-
-  const allSelected = filteredOrgs.length > 0 && filteredOrgs.every(o => selectedOrgs.has(o.id))
-
-  function toggleSelectAll() {
-    if (allSelected) {
-      setSelectedOrgs(new Set())
-    } else {
-      setSelectedOrgs(new Set(filteredOrgs.map(o => o.id)))
-    }
-  }
-
-  // ── Confirmation dialog text ──
-  const confirmOrgNames = confirmAction
-    ? confirmAction.orgIds
-        .map(id => organizations.find(o => o.id === id)?.name)
-        .filter(Boolean)
-    : []
+  // ── Count enabled providers ──
+  const enabledCount = Object.values(orgAccess).filter(Boolean).length
+  const totalProviders = providerCatalog.LLM.length + providerCatalog.STT.length + providerCatalog.TTS.length
 
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Provider Access Control</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Organization AI Provider Access</h1>
         <p className="text-sm text-muted-foreground">
-          Control which AI provider companies are available to each organization.
+          Control which LLM, STT, and TTS providers are available to each organization.
         </p>
       </div>
 
-      {/* Selectors */}
+      {/* Info banner */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="flex items-start gap-3 py-3">
+          <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div className="text-xs text-muted-foreground leading-relaxed">
+            <span className="font-medium text-foreground">Organization-level access</span> controls which providers each organization can use.
+            This is separate from <span className="font-medium text-foreground">global provider availability</span>, which is managed in the AI Providers section.
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Organization selector + filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-2 gap-4 max-w-lg">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Organization dropdown */}
             <div className="flex flex-col gap-1.5">
-              <Label>Service Type</Label>
-              <Select
-                value={service}
-                onValueChange={(v) => v && handleServiceChange(v as ServiceType)}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-medium">Select Organization</Label>
+            <Select value={selectedOrgId} onValueChange={(v) => {
+            if (v) {
+                setSelectedOrgId(v)
+                setIsSaved(false)
+            }
+            }}>
+            <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select organization">
+                <div className="flex items-center gap-2">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>{selectedOrg?.name || 'Select organization'}</span>
+                </div>
+                </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+                {organizations.map(org => (
+                <SelectItem key={org.id} value={org.id}>
+                    <div className="flex items-center gap-2">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>{org.name}</span>
+                    </div>
+                </SelectItem>
+                ))}
+            </SelectContent>
+            </Select>
+            </div>
+
+            {/* Service filter */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium">Service Type</Label>
+              <Select value={serviceFilter} onValueChange={(v) => v && setServiceFilter(v as 'all' | ServiceType)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="LLM">LLM (Large Language Model)</SelectItem>
-                  <SelectItem value="STT">STT (Speech-to-Text)</SelectItem>
-                  <SelectItem value="TTS">TTS (Text-to-Speech)</SelectItem>
+                  <SelectItem value="all">All Services</SelectItem>
+                  <SelectItem value="LLM">LLM Providers</SelectItem>
+                  <SelectItem value="STT">STT Providers</SelectItem>
+                  <SelectItem value="TTS">TTS Providers</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Provider search */}
             <div className="flex flex-col gap-1.5">
-              <Label>Provider Company</Label>
-              <Select
-                value={provider}
-                onValueChange={(v) => {
-                  if (v) {
-                    setProvider(v)
-                    setSelectedOrgs(new Set())
-                  }
-                }}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {providerCatalog[service].map(p => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-medium">Search Provider</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search providers..."
+                  value={providerSearch}
+                  onChange={(e) => setProviderSearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Organizations With Access</span>
-              <ShieldCheck className="h-4 w-4 text-[var(--status-active)]" />
-            </div>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{stats.withAccess}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Organizations Without Access</span>
-              <Lock className="h-4 w-4 text-[var(--status-warning)]" />
-            </div>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{stats.withoutAccess}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Active Organizations</span>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{stats.activeOrgs}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Provider Usage</span>
-              <Activity className="h-4 w-4 text-primary" />
-            </div>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{formatUsage(stats.totalUsage)}</p>
-            <p className="text-[11px] text-muted-foreground">requests (enabled orgs)</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Provider info strip */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="flex items-center gap-6 py-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Info className="h-4 w-4 text-primary shrink-0" />
-            <span className="text-sm font-semibold">{provider}</span>
+      {/* Selected organization info */}
+      {selectedOrg && (
+        <div className="flex items-center gap-4 rounded-lg border border-border bg-card px-5 py-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+            <Building2 className="h-6 w-6 text-primary" />
           </div>
-          <InfoItem label="Service" value={service} />
-          <InfoItem label="Status" value={providerDetails[provider]?.status || 'Platform Enabled'} />
-          <InfoItem label="Orgs Enabled" value={`${stats.withAccess} / ${organizations.length}`} />
-          <InfoItem label="Models Available" value={String(providerDetails[provider]?.models ?? 0)} />
-          <InfoItem label="Platform Usage" value={`${formatUsage(stats.totalUsage)} requests`} />
-        </CardContent>
-      </Card>
-
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Search organizations..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Org Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={accessFilter} onValueChange={(v) => v && setAccessFilter(v)}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Access" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Access</SelectItem>
-            <SelectItem value="enabled">Enabled</SelectItem>
-            <SelectItem value="disabled">Disabled</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Bulk actions bar */}
-      {selectedOrgs.size > 0 && (
-        <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 px-4 py-2.5">
-          <span className="text-sm font-medium">
-            {selectedOrgs.size} organization{selectedOrgs.size > 1 ? 's' : ''} selected
-          </span>
-          <div className="flex items-center gap-2">
-            <Button size="sm" onClick={handleBulkEnable} className="gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5" /> Enable Access
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleBulkDisable}
-              className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-            >
-              <Lock className="h-3.5 w-3.5" /> Disable Access
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelectedOrgs(new Set())} className="h-8 w-8 p-0">
-              <X className="h-4 w-4" />
-            </Button>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold">{selectedOrg.name}</h2>
+            <p className="text-sm text-muted-foreground">
+              {selectedOrg.plan} plan · {selectedOrg.agentsCount} agents · {enabledCount}/{totalProviders} providers enabled
+            </p>
           </div>
+          <Badge
+            variant="outline"
+            className={
+              selectedOrg.status === 'active'
+                ? 'border-[var(--status-active)]/30 text-[var(--status-active)]'
+                : 'border-destructive/30 text-destructive'
+            }
+          >
+            {selectedOrg.status}
+          </Badge>
         </div>
       )}
 
-      {/* Access table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
-                </TableHead>
-                <TableHead>Organization</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Provider Access</TableHead>
-                <TableHead className="text-right">Usage</TableHead>
-                <TableHead className="text-right">Agents Using Provider</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrgs.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
-                    No organizations match your filters.
-                  </TableCell>
-                </TableRow>
-              )}
-              {filteredOrgs.map(org => {
-                const hasAccess = !!providerAccess[org.id]
-                const usage = hasAccess ? getUsage(provider, org.id) : 0
-                const agents = hasAccess ? getAgentCount(provider, org.id) : 0
-                return (
-                  <TableRow key={org.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedOrgs.has(org.id)}
-                        onCheckedChange={() => toggleSelect(org.id)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{org.name}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          org.status === 'active'
-                            ? 'border-[var(--status-active)]/30 text-[var(--status-active)]'
-                            : 'border-destructive/30 text-destructive'
-                        }
-                      >
-                        {org.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          hasAccess
-                            ? 'border-[var(--status-active)]/30 text-[var(--status-active)]'
-                            : 'text-muted-foreground'
-                        }
-                      >
-                        {hasAccess ? 'ON' : 'OFF'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {hasAccess ? `${formatUsage(usage)} requests` : '—'}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {hasAccess ? `${agents} agents` : '—'}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {lastUpdatedMap[org.id] || '—'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Switch
-                        checked={hasAccess}
-                        onCheckedChange={(v) => handleToggle(org.id, v)}
-                      />
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Provider configuration sections */}
+      {selectedOrg && (
+        <div className="flex flex-col gap-4">
+          {visibleServices.map(service => (
+            <ServiceSection
+              key={service}
+              service={service}
+              accessState={orgAccess}
+              providerSearch={providerSearch}
+              onToggle={handleToggle}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* Confirmation dialog */}
-      <Dialog
-        open={confirmAction !== null}
-        onOpenChange={(open) => !open && setConfirmAction(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-[var(--status-warning)]" />
-              {confirmAction?.type === 'bulk'
-                ? `Disable ${provider} for ${confirmAction.orgIds.length} organizations?`
-                : `Disable ${provider} for ${confirmOrgNames[0] || ''}?`}
-            </DialogTitle>
-            <DialogDescription>
-              Agents in {confirmAction?.type === 'bulk' ? 'these organizations' : 'this organization'} will
-              no longer be able to select or use {provider} after this change. This can be reversed at any time.
-            </DialogDescription>
-          </DialogHeader>
-          {confirmAction?.type === 'bulk' && (
-            <div className="max-h-32 overflow-y-auto rounded-md border border-border bg-muted/30 p-3">
-              <ul className="text-xs space-y-1">
-                {confirmOrgNames.map(name => (
-                  <li key={name} className="flex items-center gap-1.5">
-                    <Lock className="h-3 w-3 text-muted-foreground" />
-                    {name}
-                  </li>
-                ))}
-              </ul>
-            </div>
+      {/* Save button */}
+      {selectedOrg && (
+        <div className="flex items-center justify-end gap-3 pt-2">
+          {isSaved && (
+            <Badge variant="outline" className="border-[var(--status-active)]/30 text-[var(--status-active)] gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Changes saved successfully
+            </Badge>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmPending}>Disable Provider</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <Button onClick={handleSave} className="gap-2 px-6">
+            <Save className="h-4 w-4" />
+            Save Changes
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
 
-// ─── Small helper component for info strip items ───────────────────────────
-function InfoItem({ label, value }: { label: string; value: string }) {
+// ─── Service Section Component ─────────────────────────────────────────────
+function ServiceSection({
+  service,
+  accessState,
+  providerSearch,
+  onToggle,
+}: {
+  service: ServiceType
+  accessState: Record<string, boolean>
+  providerSearch: string
+  onToggle: (provider: string, value: boolean) => void
+}) {
+  const config = serviceConfig[service]
+  const Icon = config.icon
+  const providers = providerCatalog[service]
+
+  // Filter by search
+  const filteredProviders = providers.filter(p =>
+    p.toLowerCase().includes(providerSearch.toLowerCase())
+  )
+
+  if (filteredProviders.length === 0) return null
+
+  const enabledInService = filteredProviders.filter(p => accessState[p]).length
+
   return (
-    <div className="flex items-center gap-1.5 text-xs">
-      <span className="text-muted-foreground">{label}:</span>
-      <span className="font-medium">{value}</span>
-    </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Icon className={cn('h-5 w-5', config.color)} />
+            <CardTitle className="text-base">{service} Providers</CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {enabledInService}/{filteredProviders.length} enabled
+            </span>
+            <Badge variant="outline" className={cn('text-[10px]', config.badgeClass)}>
+              {service}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0 pb-4">
+        <div className="rounded-lg border border-border divide-y divide-border overflow-hidden">
+          {filteredProviders.map(provider => {
+            const isEnabled = accessState[provider] ?? false
+            const platformStatus = platformProviderStatus[provider] || 'available'
+            const isMaintenance = platformStatus === 'maintenance'
+
+            return (
+              <div
+                key={provider}
+                className={cn(
+                  'flex items-center justify-between px-4 py-3 transition-colors',
+                  isEnabled ? 'hover:bg-muted/20' : 'hover:bg-muted/10 opacity-80',
+                  isMaintenance && 'opacity-50'
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium">{provider}</span>
+                  {platformStatus === 'degraded' && (
+                    <Badge variant="outline" className="text-[10px] border-[var(--status-warning)]/30 text-[var(--status-warning)]">
+                      Degraded
+                    </Badge>
+                  )}
+                  {isMaintenance && (
+                    <Badge variant="outline" className="text-[10px] border-muted-foreground/30 text-muted-foreground">
+                      Maintenance
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className={cn(
+                    'text-xs font-medium',
+                    isEnabled ? 'text-[var(--status-active)]' : 'text-muted-foreground'
+                  )}>
+                    {isEnabled ? 'Enabled' : 'Disabled'}
+                  </span>
+                  <Switch
+                    checked={isEnabled}
+                    onCheckedChange={(v) => onToggle(provider, v)}
+                    disabled={isMaintenance}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import {
-  Search, Building2, ShieldCheck, Lock, Save, CheckCircle2, Info, Brain, Mic2, Volume2, ChevronDown
+  Search, Building2, ShieldCheck, Lock, Save, CheckCircle2, Info, Brain, Mic2, Volume2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,7 +14,6 @@ import { Switch } from '@/components/ui/switch'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type ServiceType = 'LLM' | 'STT' | 'TTS'
@@ -69,52 +68,47 @@ const organizations: Organization[] = [
   { id: 'org-006', name: 'Stellar Media', status: 'active', plan: 'Professional', agentsCount: 15 },
 ]
 
-// ─── Build initial access state ────────────────────────────────────────────
+// ─── Build initial access state (ONE provider per service) ─────────────────
 function buildInitialAccessState(): Record<string, Record<string, boolean>> {
   const state: Record<string, Record<string, boolean>> = {}
+  const allProviders = [
+    ...providerCatalog.LLM,
+    ...providerCatalog.STT,
+    ...providerCatalog.TTS,
+  ]
 
   organizations.forEach(org => {
     state[org.id] = {}
-    const allProviders = [
-      ...providerCatalog.LLM,
-      ...providerCatalog.STT,
-      ...providerCatalog.TTS,
-    ]
+    // Start all OFF
     allProviders.forEach(provider => {
-      state[org.id][provider] = true
+      state[org.id][provider] = false
     })
   })
 
-  // Realistic disabled states
-  state['org-001']['Google Gemini'] = false
-  state['org-001']['Meta'] = false
-  state['org-001']['PlayHT'] = false
+  // Default: one provider selected per service for each org
+  organizations.forEach(org => {
+    state[org.id]['OpenAI'] = true      // LLM default
+    state[org.id]['Deepgram'] = true    // STT default
+    state[org.id]['Cartesia'] = true    // TTS default
+  })
 
-  state['org-002']['Anthropic'] = false
-  state['org-002']['Sarvam AI'] = false
-  state['org-002']['ElevenLabs'] = false
+  // Realistic per-org overrides (still one per service)
+  state['org-002']['OpenAI'] = false
+  state['org-002']['Anthropic'] = true        // NovaStack → Anthropic for LLM
 
-  state['org-003']['Meta'] = false
-  state['org-003']['PlayHT'] = false
-  state['org-003']['Smallest AI'] = false
+  state['org-003']['Deepgram'] = false
+  state['org-003']['Sarvam AI'] = true        // Zenith → Sarvam AI for STT
 
-  state['org-004']['Mistral'] = false
-  state['org-004']['Smallest AI'] = false
-  state['org-004']['Google Cloud TTS'] = false
+  state['org-004']['Cartesia'] = false
+  state['org-004']['ElevenLabs'] = true       // Bright Retail → ElevenLabs for TTS
 
-  state['org-005']['OpenAI'] = false
-  state['org-005']['Anthropic'] = false
-  state['org-005']['Google Gemini'] = false
-  state['org-005']['Mistral'] = false
-  state['org-005']['Meta'] = false
-  state['org-005']['Deepgram'] = false
-  state['org-005']['Sarvam AI'] = false
-  state['org-005']['Cartesia'] = false
-  state['org-005']['ElevenLabs'] = false
+  state['org-006']['Cartesia'] = false
+  state['org-006']['ElevenLabs'] = true       // Stellar Media → ElevenLabs for TTS
 
-  state['org-006']['Meta'] = false
-  state['org-006']['Google Cloud TTS'] = false
-  state['org-006']['PlayHT'] = false
+  // Suspended org: no provider selected
+  allProviders.forEach(provider => {
+    state['org-005'][provider] = false
+  })
 
   return state
 }
@@ -127,25 +121,35 @@ export default function OrgProviderAccessPage() {
   const [accessState, setAccessState] = useState(buildInitialAccessState())
   const [isSaved, setIsSaved] = useState(false)
 
-  // ── Get selected organization ──
   const selectedOrg = organizations.find(o => o.id === selectedOrgId)
   const orgAccess = accessState[selectedOrgId] || {}
 
-  // ── Visible services ──
   const visibleServices: ServiceType[] = useMemo(() => {
     if (serviceFilter === 'all') return ['LLM', 'STT', 'TTS']
     return [serviceFilter]
   }, [serviceFilter])
 
-  // ── Toggle provider ──
-  function handleToggle(provider: string, newValue: boolean) {
-    setAccessState(prev => ({
-      ...prev,
-      [selectedOrgId]: {
-        ...prev[selectedOrgId],
-        [provider]: newValue,
-      },
-    }))
+  // ── Toggle with radio-group behavior (one ON per service) ──
+  function handleToggle(service: ServiceType, provider: string, newValue: boolean) {
+    setAccessState(prev => {
+      const orgProviders = { ...prev[selectedOrgId] }
+
+      if (newValue) {
+        // Turn OFF all providers of this service, then turn ON the selected one
+        providerCatalog[service].forEach(p => {
+          orgProviders[p] = false
+        })
+        orgProviders[provider] = true
+      } else {
+        // Turn OFF this provider (deselects the service)
+        orgProviders[provider] = false
+      }
+
+      return {
+        ...prev,
+        [selectedOrgId]: orgProviders,
+      }
+    })
     setIsSaved(false)
   }
 
@@ -155,9 +159,9 @@ export default function OrgProviderAccessPage() {
     setTimeout(() => setIsSaved(false), 3000)
   }
 
-  // ── Count enabled providers ──
+  // Count of services that have a provider selected (0–3)
   const enabledCount = Object.values(orgAccess).filter(Boolean).length
-  const totalProviders = providerCatalog.LLM.length + providerCatalog.STT.length + providerCatalog.TTS.length
+  const totalServices = 3
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -174,8 +178,9 @@ export default function OrgProviderAccessPage() {
         <CardContent className="flex items-start gap-3 py-3">
           <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
           <div className="text-xs text-muted-foreground leading-relaxed">
-            <span className="font-medium text-foreground">Organization-level access</span> controls which providers each organization can use.
-            This is separate from <span className="font-medium text-foreground">global provider availability</span>, which is managed in the AI Providers section.
+            Only <span className="font-medium text-foreground">one provider per service type</span> can be active for an organization.
+            Enabling a provider automatically disables the others in the same service category.
+            Global provider availability is managed separately in the AI Providers section.
           </div>
         </CardContent>
       </Card>
@@ -187,31 +192,34 @@ export default function OrgProviderAccessPage() {
             {/* Organization dropdown */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium">Select Organization</Label>
-            <Select value={selectedOrgId} onValueChange={(v) => {
-            if (v) {
-                setSelectedOrgId(v)
-                setIsSaved(false)
-            }
-            }}>
-            <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select organization">
-                <div className="flex items-center gap-2">
-                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>{selectedOrg?.name || 'Select organization'}</span>
-                </div>
-                </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-                {organizations.map(org => (
-                <SelectItem key={org.id} value={org.id}>
+              <Select value={selectedOrgId} onValueChange={(v) => {
+                if (v) {
+                  setSelectedOrgId(v)
+                  setIsSaved(false)
+                }
+              }}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select organization">
                     <div className="flex items-center gap-2">
-                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>{org.name}</span>
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>{selectedOrg?.name || 'Select organization'}</span>
                     </div>
-                </SelectItem>
-                ))}
-            </SelectContent>
-            </Select>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.map(org => (
+                    <SelectItem key={org.id} value={org.id}>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{org.name}</span>
+                        {org.status === 'suspended' && (
+                          <Badge variant="outline" className="text-[9px] px-1 border-destructive/30 text-destructive">Suspended</Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Service filter */}
@@ -256,7 +264,7 @@ export default function OrgProviderAccessPage() {
           <div className="flex-1">
             <h2 className="text-lg font-semibold">{selectedOrg.name}</h2>
             <p className="text-sm text-muted-foreground">
-              {selectedOrg.plan} plan · {selectedOrg.agentsCount} agents · {enabledCount}/{totalProviders} providers enabled
+              {selectedOrg.plan} plan · {selectedOrg.agentsCount} agents · {enabledCount}/{totalServices} services configured
             </p>
           </div>
           <Badge
@@ -315,20 +323,20 @@ function ServiceSection({
   service: ServiceType
   accessState: Record<string, boolean>
   providerSearch: string
-  onToggle: (provider: string, value: boolean) => void
+  onToggle: (service: ServiceType, provider: string, value: boolean) => void
 }) {
   const config = serviceConfig[service]
   const Icon = config.icon
   const providers = providerCatalog[service]
 
-  // Filter by search
   const filteredProviders = providers.filter(p =>
     p.toLowerCase().includes(providerSearch.toLowerCase())
   )
 
   if (filteredProviders.length === 0) return null
 
-  const enabledInService = filteredProviders.filter(p => accessState[p]).length
+  // Find the currently active provider for this service
+  const activeProvider = providers.find(p => accessState[p])
 
   return (
     <Card>
@@ -339,9 +347,13 @@ function ServiceSection({
             <CardTitle className="text-base">{service} Providers</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {enabledInService}/{filteredProviders.length} enabled
-            </span>
+            {activeProvider ? (
+              <span className="text-xs text-muted-foreground">
+                Active: <span className="font-medium text-foreground">{activeProvider}</span>
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground italic">No provider selected</span>
+            )}
             <Badge variant="outline" className={cn('text-[10px]', config.badgeClass)}>
               {service}
             </Badge>
@@ -360,12 +372,17 @@ function ServiceSection({
                 key={provider}
                 className={cn(
                   'flex items-center justify-between px-4 py-3 transition-colors',
-                  isEnabled ? 'hover:bg-muted/20' : 'hover:bg-muted/10 opacity-80',
+                  isEnabled ? 'bg-primary/5' : 'hover:bg-muted/20',
                   isMaintenance && 'opacity-50'
                 )}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium">{provider}</span>
+                  {isEnabled && (
+                    <Badge variant="outline" className="text-[10px] border-[var(--status-active)]/30 text-[var(--status-active)]">
+                      Selected
+                    </Badge>
+                  )}
                   {platformStatus === 'degraded' && (
                     <Badge variant="outline" className="text-[10px] border-[var(--status-warning)]/30 text-[var(--status-warning)]">
                       Degraded
@@ -387,7 +404,7 @@ function ServiceSection({
                   </span>
                   <Switch
                     checked={isEnabled}
-                    onCheckedChange={(v) => onToggle(provider, v)}
+                    onCheckedChange={(v) => onToggle(service, provider, v)}
                     disabled={isMaintenance}
                   />
                 </div>

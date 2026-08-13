@@ -60,7 +60,7 @@ export function AgentDetail({ agent }: { agent: Agent }) {
       {/* Breadcrumb + Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" render={<Link href="/agents" />} className="h-8 px-2 text-muted-foreground">
+          <Button variant="ghost" size="sm" render={<Link href="/agents" />} nativeButton={false} className="h-8 px-2 text-muted-foreground">
             <ChevronLeft className="h-4 w-4 mr-1" />
             Agents
           </Button>
@@ -69,15 +69,15 @@ export function AgentDetail({ agent }: { agent: Agent }) {
           <Badge variant="outline" className={statusStyle[agent.status]}>{agent.status}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" render={<Link href={`/agents/${agent.id}/version`} />} className="gap-1.5">
+          <Button size="sm" variant="outline" render={<Link href={`/agents/${agent.id}/version`} />} nativeButton={false} className="gap-1.5">
             <GitBranch className="h-4 w-4" />
             v{agent.version}
           </Button>
-          <Button size="sm" variant="outline" render={<Link href={`/agents/${agent.id}/config`} />} className="gap-1.5">
+          <Button size="sm" variant="outline" render={<Link href={`/agents/${agent.id}/config`} />} nativeButton={false} className="gap-1.5">
             <Settings2 className="h-4 w-4" />
             Configure
           </Button>
-          <Button size="sm" render={<Link href={`/agents/${agent.id}/publish`} />} className="gap-1.5">
+          <Button size="sm" render={<Link href={`/agents/${agent.id}/publish`} />} nativeButton={false} className="gap-1.5">
             <Rocket className="h-4 w-4" />
             Publish
           </Button>

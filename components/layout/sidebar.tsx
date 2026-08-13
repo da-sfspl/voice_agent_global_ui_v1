@@ -41,6 +41,8 @@ import {
   ChevronLeft,
   Layers,
   Workflow,
+  ArrowLeftRight,
+  Bell
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -53,12 +55,12 @@ type NavItem = {
 }
 
 const navGroups: { group: string; items: NavItem[] }[] = [
-  {
-    group: '',
-    items: [
-      { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-    ],
-  },
+  // {
+  //   group: '',
+  //   items: [
+  //     { label: 'Dashboard', href: '/', icon: LayoutDashboard },
+  //   ],
+  // },
   {
     group: 'Platform',
     items: [
@@ -67,118 +69,161 @@ const navGroups: { group: string; items: NavItem[] }[] = [
         icon: Layers,
         children: [
           { label: 'Workspace Management', href: '/platform/workspaces', icon: Building2 },
-          { label: 'Users', href: '/platform/users', icon: Users },
-          { label: 'Roles & Permissions', href: '/platform/roles', icon: ShieldCheck },
+          // { label: 'Users', href: '/platform/users', icon: Users },
+          // { label: 'Roles & Permissions', href: '/platform/roles', icon: ShieldCheck },
         ],
       },
     ],
   },
-  {
-    group: 'AI Agents',
-    items: [
-      {
-        label: 'AI Agents',
-        icon: Bot,
-        children: [
-          { label: 'Agents', href: '/agents', icon: Bot },
-          { label: 'Agent Templates', href: '/agents/templates', icon: FileText },
-          { label: 'Prompt Management', href: '/agents/prompts', icon: MessageSquareText },
-          { label: 'Conversation Flow', href: '/agents/flows', icon: Workflow },
-          { label: 'Knowledge Base', href: '/agents/knowledge', icon: BookOpen },
-          { label: 'Voice Configuration', href: '/agents/voice', icon: Mic2 },
-        ],
-      },
-    ],
-  },
-  {
-    group: 'Telephony',
-    items: [
-      {
-        label: 'Telephony',
-        icon: PhoneIncoming,
-        children: [
-          { label: 'Inbound Calls', href: '/telephony/inbound', icon: PhoneIncoming },
-          { label: 'Outbound Calls', href: '/telephony/outbound', icon: PhoneOutgoing },
-          { label: 'SIP Configuration', href: '/telephony/sip', icon: Server },
-          { label: 'Live Calls', href: '/telephony/live', icon: Radio, badge: '3' },
-        ],
-      },
-    ],
-  },
-  {
-    group: 'Campaigns',
-    items: [
-      {
-        label: 'Campaigns',
-        icon: Megaphone,
-        children: [
-          { label: 'Campaign Management', href: '/campaigns', icon: Megaphone },
-          { label: 'Contacts', href: '/campaigns/contacts', icon: Contact },
-          { label: 'Scheduling', href: '/campaigns/scheduling', icon: CalendarClock },
-        ],
-      },
-    ],
-  },
-  {
-    group: 'AI Providers',
-    items: [
-      {
-        label: 'AI Providers',
-        icon: Cpu,
-        children: [
-          { label: 'LLM Providers', href: '/providers/llm', icon: Brain },
-          { label: 'STT Providers', href: '/providers/stt', icon: AudioLines },
-          { label: 'TTS Providers', href: '/providers/tts', icon: Volume2 },
-          { label: 'Routing & Fallback', href: '/providers/routing', icon: GitBranch },
-        ],
-      },
-    ],
-  },
-  {
-    group: 'Analytics',
-    items: [
-      {
-        label: 'Analytics',
-        icon: BarChart3,
-        children: [
-          { label: 'Calls', href: '/analytics/calls', icon: Gauge },
-          { label: 'AI Performance', href: '/analytics/ai', icon: LineChart },
-          { label: 'Campaign Reports', href: '/analytics/campaigns', icon: BarChart3 },
-          { label: 'Cost Analytics', href: '/analytics/costs', icon: DollarSign },
-        ],
-      },
-    ],
-  },
-  {
-    group: 'Monitoring',
-    items: [
-      {
-        label: 'Monitoring',
-        icon: Activity,
-        children: [
-          { label: 'System Health', href: '/monitoring/health', icon: Activity },
-          { label: 'Logs', href: '/monitoring/logs', icon: ScrollText },
-          { label: 'Alerts', href: '/monitoring/alerts', icon: BellDot, badge: '5' },
-        ],
-      },
-    ],
-  },
-  {
-    group: 'Administration',
-    items: [
-      {
-        label: 'Administration',
-        icon: Settings2,
-        children: [
-          { label: 'Settings', href: '/admin/settings', icon: Settings2 },
-          { label: 'Notifications', href: '/admin/notifications', icon: BellDot },
-          { label: 'Branding', href: '/admin/branding', icon: Palette },
-          { label: 'Audit Logs', href: '/admin/audit', icon: ClipboardList },
-        ],
-      },
-    ],
-  },
-]
+  // {
+  //   group: 'AI Agents',
+  //   items: [
+  //     {
+  //       label: 'AI Agents',
+  //       icon: Bot,
+  //       children: [
+  //         { label: 'Agents', href: '/agents', icon: Bot },
+  //         { label: 'Agent Templates', href: '/agents/templates', icon: FileText },
+  //         { label: 'Prompt Management', href: '/agents/prompts', icon: MessageSquareText },
+  //         { label: 'Conversation Flow', href: '/agents/flows', icon: Workflow },
+  //         { label: 'Knowledge Base', href: '/agents/knowledge', icon: BookOpen },
+  //         { label: 'Voice Configuration', href: '/agents/voice', icon: Mic2 },
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   group: 'Telephony',
+  //   items: [
+  //     {
+  //       label: 'Telephony',
+  //       icon: PhoneIncoming,
+  //       children: [
+  //         { label: 'Inbound Calls', href: '/telephony/inbound', icon: PhoneIncoming },
+  //         { label: 'Outbound Calls', href: '/telephony/outbound', icon: PhoneOutgoing },
+  //         { label: 'SIP Configuration', href: '/telephony/sip', icon: Server },
+  //         { label: 'Live Calls', href: '/telephony/live', icon: Radio, badge: '3' },
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   group: 'Campaigns',
+  //   items: [
+  //     {
+  //       label: 'Campaigns',
+  //       icon: Megaphone,
+  //       children: [
+  //         { label: 'Campaign Management', href: '/campaigns', icon: Megaphone },
+  //         { label: 'Contacts', href: '/campaigns/contacts', icon: Contact },
+  //         { label: 'Scheduling', href: '/campaigns/scheduling', icon: CalendarClock },
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   group: 'AI Providers',
+  //   items: [
+  //     {
+  //       label: 'AI Providers',
+  //       icon: Cpu,
+  //       children: [
+  //         { label: 'LLM Providers', href: '/providers/llm', icon: Brain },
+  //         { label: 'STT Providers', href: '/providers/stt', icon: AudioLines },
+  //         { label: 'TTS Providers', href: '/providers/tts', icon: Volume2 },
+  //         { label: 'Routing & Fallback', href: '/providers/routing', icon: GitBranch },
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   group: 'Analytics',
+  //   items: [
+  //     {
+  //       label: 'Analytics',
+  //       icon: BarChart3,
+  //       children: [
+  //         { label: 'Calls', href: '/analytics/calls', icon: Gauge },
+  //         { label: 'AI Performance', href: '/analytics/ai', icon: LineChart },
+  //         { label: 'Campaign Reports', href: '/analytics/campaigns', icon: BarChart3 },
+  //         { label: 'Cost Analytics', href: '/analytics/costs', icon: DollarSign },
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   group: 'Monitoring',
+  //   items: [
+  //     {
+  //       label: 'Monitoring',
+  //       icon: Activity,
+  //       children: [
+  //         { label: 'System Health', href: '/monitoring/health', icon: Activity },
+  //         { label: 'Logs', href: '/monitoring/logs', icon: ScrollText },
+  //         { label: 'Alerts', href: '/monitoring/alerts', icon: BellDot, badge: '5' },
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   group: 'Administration',
+  //   items: [
+  //     {
+  //       label: 'Administration',
+  //       icon: Settings2,
+  //       children: [
+  //         { label: 'Settings', href: '/admin/settings', icon: Settings2 },
+  //         { label: 'Notifications', href: '/admin/notifications', icon: BellDot },
+  //         { label: 'Branding', href: '/admin/branding', icon: Palette },
+  //         { label: 'Audit Logs', href: '/admin/audit', icon: ClipboardList },
+  //       ],
+  //     },
+  //   ],
+  // },
+{
+  group: 'Platform Operations',
+  items: [
+    {
+      label: 'Platform Usage',
+      icon: BarChart3,
+      children: [
+        { label: 'Organization Usage', href: '/usage/organizations', icon: Building2 },
+        { label: 'Provider Usage', href: '/usage/providers', icon: Server },
+        { label: 'Cost Overview', href: '/usage/costs', icon: DollarSign },
+      ],
+    },
+    {
+      label: 'AI Providers',
+      icon: Brain,
+      children: [
+        { label: 'LLM Providers', href: '/platform-providers/llm', icon: Brain },
+        { label: 'STT Providers', href: '/platform-providers/stt', icon: Mic2 },
+        { label: 'TTS Providers', href: '/platform-providers/tts', icon: Volume2 },
+        { label: 'Routing & Fallback', href: '/platform-providers/routing', icon: ArrowLeftRight },
+      ],
+    },
+    {
+      label: 'Platform Monitoring',
+      icon: Activity,
+      children: [
+        { label: 'Platform Health', href: '/monitoring/platform-health', icon: Activity },
+        { label: 'Platform Logs', href: '/monitoring/platform-logs', icon: ScrollText },
+        { label: 'Platform Alerts', href: '/monitoring/platform-alerts', icon: Bell },
+      ],
+    },
+    {
+      label: 'Administration',
+      icon: ShieldCheck,
+      children: [
+        { label: 'Platform Settings', href: '/admin/platform-settings', icon: Settings2 },
+        { label: 'Platform Audit Logs', href: '/admin/platform-audit', icon: ShieldCheck },
+      ],
+    },
+  ],
+},
+  ]
+
+
 
 function NavItemRow({
   item,

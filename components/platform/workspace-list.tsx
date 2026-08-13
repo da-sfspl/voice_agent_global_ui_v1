@@ -31,16 +31,51 @@ import {
   Settings,
   Ban,
   ExternalLink,
+  Check,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react'
 
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+
 const planColors: Record<string, string> = {
-  enterprise: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
-  professional: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  starter: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  starter: 'border-blue-500/30 text-blue-500 bg-blue-500/10',
+  professional: 'border-purple-500/30 text-purple-500 bg-purple-500/10',
+  enterprise: 'border-amber-500/30 text-amber-500 bg-amber-500/10',
 }
+
+const wizardSteps = [
+  { id: 1, label: 'Basic Info' },
+  { id: 2, label: 'Owner & Admin' },
+  { id: 3, label: 'Plan & Config' },
+  { id: 4, label: 'Review' },
+]
 
 export function WorkspaceList() {
   const [search, setSearch] = useState('')
+  const [showWizard, setShowWizard] = useState(false)
+  const [wizardStep, setWizardStep] = useState(1)
+  const [wizardData, setWizardData] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    ownerName: '',
+    ownerEmail: '',
+    adminEmail: '',
+    plan: 'starter',
+    region: 'us-east-1',
+    maxAgents: 10,
+    maxUsers: 5,
+    monthlyCallLimit: 1000,
+    enableRecording: true,
+    enableTranscription: true,
+    enableAnalytics: true,
+  })
 
   const filtered = workspaces.filter(
     (w) =>
@@ -48,6 +83,44 @@ export function WorkspaceList() {
       w.owner.toLowerCase().includes(search.toLowerCase()) ||
       w.slug.toLowerCase().includes(search.toLowerCase()),
   )
+
+  const handleNext = () => {
+    if (wizardStep < 4) setWizardStep(wizardStep + 1)
+  }
+
+  const handleBack = () => {
+    if (wizardStep > 1) setWizardStep(wizardStep - 1)
+  }
+
+  const handleCreate = () => {
+    // In a real app, this would call an API
+    console.log('Creating workspace:', wizardData)
+    setShowWizard(false)
+    setWizardStep(1)
+    setWizardData({
+      name: '',
+      slug: '',
+      description: '',
+      ownerName: '',
+      ownerEmail: '',
+      adminEmail: '',
+      plan: 'starter',
+      region: 'us-east-1',
+      maxAgents: 10,
+      maxUsers: 5,
+      monthlyCallLimit: 1000,
+      enableRecording: true,
+      enableTranscription: true,
+      enableAnalytics: true,
+    })
+  }
+
+  const canProceed = () => {
+    if (wizardStep === 1) return wizardData.name.trim() !== '' && wizardData.slug.trim() !== ''
+    if (wizardStep === 2) return wizardData.ownerName.trim() !== '' && wizardData.ownerEmail.trim() !== ''
+    if (wizardStep === 3) return true
+    return true
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -59,7 +132,7 @@ export function WorkspaceList() {
             Manage workspaces, plans, and tenant configuration for this organization.
           </p>
         </div>
-        <Button size="sm" className="gap-1.5">
+        <Button size="sm" className="gap-1.5" onClick={() => setShowWizard(true)}>
           <Plus className="h-4 w-4" />
           New Workspace
         </Button>
@@ -126,6 +199,281 @@ export function WorkspaceList() {
           </TableBody>
         </Table>
       </div>
+
+      {/* New Workspace Wizard */}
+      <Dialog open={showWizard} onOpenChange={setShowWizard}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Workspace</DialogTitle>
+            <DialogDescription>
+              Set up a new workspace with configuration and resource allocation.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Step Indicator */}
+          <div className="flex items-center justify-between mb-6">
+            {wizardSteps.map((step, idx) => (
+              <div key={step.id} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-medium ${
+                    wizardStep === step.id
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : wizardStep > step.id
+                      ? 'border-green-500 bg-green-500 text-white'
+                      : 'border-muted bg-muted text-muted-foreground'
+                  }`}>
+                    {wizardStep > step.id ? <Check className="h-4 w-4" /> : step.id}
+                  </div>
+                  <span className={`text-xs mt-1 ${wizardStep === step.id ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                    {step.label}
+                  </span>
+                </div>
+                {idx < wizardSteps.length - 1 && (
+                  <div className={`flex-1 h-px mx-2 ${wizardStep > step.id ? 'bg-green-500' : 'bg-muted'}`} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <Separator />
+
+          {/* Step 1: Basic Info */}
+          {wizardStep === 1 && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Workspace Name *</Label>
+                <Input
+                  placeholder="e.g. Acme Corporation"
+                  value={wizardData.name}
+                  onChange={(e) => setWizardData({ ...wizardData, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Workspace Slug *</Label>
+                <Input
+                  placeholder="e.g. acme-corp"
+                  value={wizardData.slug}
+                  onChange={(e) => setWizardData({ ...wizardData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                />
+                <p className="text-xs text-muted-foreground">URL-friendly identifier (lowercase, hyphens only)</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  placeholder="Brief description of this workspace..."
+                  value={wizardData.description}
+                  onChange={(e) => setWizardData({ ...wizardData, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Owner & Admin */}
+          {wizardStep === 2 && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Owner Name *</Label>
+                <Input
+                  placeholder="e.g. John Smith"
+                  value={wizardData.ownerName}
+                  onChange={(e) => setWizardData({ ...wizardData, ownerName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Owner Email *</Label>
+                <Input
+                  type="email"
+                  placeholder="e.g. john@acme.com"
+                  value={wizardData.ownerEmail}
+                  onChange={(e) => setWizardData({ ...wizardData, ownerEmail: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Initial Admin Email</Label>
+                <Input
+                  type="email"
+                  placeholder="e.g. admin@acme.com (optional)"
+                  value={wizardData.adminEmail}
+                  onChange={(e) => setWizardData({ ...wizardData, adminEmail: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  If different from owner, this person will have admin access to the workspace.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Plan & Configuration */}
+          {wizardStep === 3 && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Plan</Label>
+                  <Select value={wizardData.plan} onValueChange={(v) => v && setWizardData({ ...wizardData, plan: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="starter">Starter</SelectItem>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Region</Label>
+                  <Select value={wizardData.region} onValueChange={(v) => v && setWizardData({ ...wizardData, region: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="us-east-1">US East (Virginia)</SelectItem>
+                      <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                      <SelectItem value="eu-west-1">EU West (Ireland)</SelectItem>
+                      <SelectItem value="ap-south-1">Asia Pacific (Mumbai)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Max Agents</Label>
+                  <Input
+                    type="number"
+                    value={wizardData.maxAgents}
+                    onChange={(e) => setWizardData({ ...wizardData, maxAgents: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Users</Label>
+                  <Input
+                    type="number"
+                    value={wizardData.maxUsers}
+                    onChange={(e) => setWizardData({ ...wizardData, maxUsers: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Monthly Call Limit</Label>
+                <Input
+                  type="number"
+                  value={wizardData.monthlyCallLimit}
+                  onChange={(e) => setWizardData({ ...wizardData, monthlyCallLimit: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label>Features</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Call Recording</p>
+                      <p className="text-xs text-muted-foreground">Enable automatic call recording</p>
+                    </div>
+                    <Switch
+                      checked={wizardData.enableRecording}
+                      onCheckedChange={(checked) => setWizardData({ ...wizardData, enableRecording: checked })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Transcription</p>
+                      <p className="text-xs text-muted-foreground">Enable automatic transcription</p>
+                    </div>
+                    <Switch
+                      checked={wizardData.enableTranscription}
+                      onCheckedChange={(checked) => setWizardData({ ...wizardData, enableTranscription: checked })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Analytics</p>
+                      <p className="text-xs text-muted-foreground">Enable advanced analytics dashboard</p>
+                    </div>
+                    <Switch
+                      checked={wizardData.enableAnalytics}
+                      onCheckedChange={(checked) => setWizardData({ ...wizardData, enableAnalytics: checked })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Review */}
+          {wizardStep === 4 && (
+            <div className="space-y-4 py-4">
+              <div className="rounded-lg border border-border p-4 space-y-3">
+                <h3 className="font-semibold">Workspace Details</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="text-muted-foreground">Name:</span> {wizardData.name}</div>
+                  <div><span className="text-muted-foreground">Slug:</span> {wizardData.slug}</div>
+                  <div className="col-span-2"><span className="text-muted-foreground">Description:</span> {wizardData.description || '—'}</div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-4 space-y-3">
+                <h3 className="font-semibold">Owner & Admin</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="text-muted-foreground">Owner:</span> {wizardData.ownerName}</div>
+                  <div><span className="text-muted-foreground">Email:</span> {wizardData.ownerEmail}</div>
+                  <div className="col-span-2"><span className="text-muted-foreground">Admin:</span> {wizardData.adminEmail || 'Same as owner'}</div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-4 space-y-3">
+                <h3 className="font-semibold">Configuration</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="text-muted-foreground">Plan:</span> <span className="capitalize">{wizardData.plan}</span></div>
+                  <div><span className="text-muted-foreground">Region:</span> {wizardData.region}</div>
+                  <div><span className="text-muted-foreground">Max Agents:</span> {wizardData.maxAgents}</div>
+                  <div><span className="text-muted-foreground">Max Users:</span> {wizardData.maxUsers}</div>
+                  <div><span className="text-muted-foreground">Monthly Calls:</span> {wizardData.monthlyCallLimit.toLocaleString()}</div>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  {wizardData.enableRecording && <Badge variant="outline">Recording</Badge>}
+                  {wizardData.enableTranscription && <Badge variant="outline">Transcription</Badge>}
+                  {wizardData.enableAnalytics && <Badge variant="outline">Analytics</Badge>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={wizardStep === 1}
+              className="gap-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowWizard(false)}>
+                Cancel
+              </Button>
+              {wizardStep < 4 ? (
+                <Button onClick={handleNext} disabled={!canProceed()} className="gap-1">
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button onClick={handleCreate} className="gap-1">
+                  Create Workspace
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

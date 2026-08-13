@@ -1,7 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Plus, Settings2, Trash2, ArrowDown, ArrowRight, Info, ShieldCheck, Lock
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -10,8 +14,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowDown, ArrowRight, Plus, Settings2, Trash2, Info, X, ShieldCheck, Lock } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
 
 // ─── Provider catalogs by service type ──────────────────────────────────────
@@ -82,21 +84,6 @@ const initialRules: RoutingRule[] = [
   },
 ]
 
-// ─── Condition formatter for table display ──────────────────────────────────
-function formatConditions(rule: RoutingRule): string {
-  return rule.conditions.map(id => {
-    const cond = FAILOVER_CONDITIONS.find(c => c.id === id)
-    if (!cond) return ''
-    if (cond.hasThreshold && rule.thresholds[id]) {
-      const val = rule.thresholds[id]
-      if (id === 'timeout') return `Timeout > ${val}s`
-      if (id === 'error_rate') return `Error Rate > ${val}%`
-      if (id === 'latency') return `Latency > ${val}ms`
-    }
-    return cond.label
-  }).join(' OR ')
-}
-
 // ─── Empty form state factory ───────────────────────────────────────────────
 function emptyForm(): RoutingRule {
   return {
@@ -119,6 +106,7 @@ export default function RoutingFallbackPage() {
   const [form, setForm] = useState<RoutingRule>(emptyForm())
 
   const isEditing = editingRule !== null
+  const availableProviders = providerCatalog[form.service]
 
   // ── Open add ──
   function openAdd() {
@@ -192,368 +180,366 @@ export default function RoutingFallbackPage() {
     }))
   }
 
-  const availableProviders = providerCatalog[form.service]
-
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Platform Routing & Fallback</h1>
-          <p className="text-sm text-muted-foreground">
-            Configure platform-wide default provider routing and automatic failover policies for LLM, STT, and TTS services.
-          </p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
-          <DialogTrigger
-            className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Routing Rule
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{isEditing ? 'Edit Routing Rule' : 'Add Routing Rule'}</DialogTitle>
-              <DialogDescription>
-                {isEditing
-                  ? 'Update the platform-level failover policy.'
-                  : 'Define a platform default provider and its fallback chain.'}
-              </DialogDescription>
-            </DialogHeader>
+ {/* Header */}
+<div className="flex items-center justify-between">
+  <div>
+    <h1 className="text-2xl font-semibold tracking-tight">Platform Routing & Fallback</h1>
+    <p className="text-sm text-muted-foreground">
+      Configure platform-wide default provider routing and automatic failover policies for LLM, STT, and TTS services.
+    </p>
+  </div>
+  <Button onClick={openAdd} className="gap-2">
+    <Plus className="h-4 w-4" />
+    Add Routing Rule
+  </Button>
+</div>
 
-            <div className="grid gap-5 py-2">
-              {/* Service Type */}
-              <div className="flex flex-col gap-1.5">
-                <Label>Service Type</Label>
-                <Select
-                  value={form.service}
-                  onValueChange={(v) => v && handleServiceChange(v as 'LLM' | 'STT' | 'TTS')}
-                  disabled={isEditing}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="LLM">LLM (Large Language Model)</SelectItem>
-                    <SelectItem value="STT">STT (Speech-to-Text)</SelectItem>
-                    <SelectItem value="TTS">TTS (Text-to-Speech)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-[11px] text-muted-foreground">
-                  Providers shown below are filtered to this service type.
-                </p>
-              </div>
+{/* Add/Edit Routing Rule Dialog */}
+<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+  <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>{isEditing ? 'Edit Routing Rule' : 'Add Routing Rule'}</DialogTitle>
+      <DialogDescription>
+        {isEditing
+          ? 'Update the platform-level failover policy.'
+          : 'Define a platform default provider and its fallback chain.'}
+      </DialogDescription>
+    </DialogHeader>
 
-              {/* Provider chain */}
-              <div className="rounded-lg border border-border p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <ArrowDown className="h-4 w-4 text-muted-foreground" />
-                  <Label className="text-xs font-semibold uppercase tracking-wide">Provider Failover Chain</Label>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs">
-                      Platform Default <span className="text-destructive">*</span>
-                    </Label>
-                    <Select
-                      value={form.primary || ''}
-                      onValueChange={(v) => v && setForm(f => ({ ...f, primary: v }))}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Select default" /></SelectTrigger>
-                      <SelectContent>
-                        {availableProviders.map(p => (
-                          <SelectItem key={p} value={p}>{p}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[10px] text-muted-foreground">Primary provider</p>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs">Fallback 1</Label>
-                    <Select
-                      value={form.fallback1 || ''}
-                      onValueChange={(v) => setForm(f => ({ ...f, fallback1: v || undefined }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Optional" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— None —</SelectItem>
-                        {availableProviders.filter(p => p !== form.primary).map(p => (
-                          <SelectItem key={p} value={p}>{p}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[10px] text-muted-foreground">Second try</p>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs">Fallback 2</Label>
-                    <Select
-                      value={form.fallback2 || ''}
-                      onValueChange={(v) => setForm(f => ({ ...f, fallback2: v || undefined }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Optional" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— None —</SelectItem>
-                        {availableProviders.filter(p => p !== form.primary && p !== form.fallback1).map(p => (
-                          <SelectItem key={p} value={p}>{p}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[10px] text-muted-foreground">Final fallback</p>
-                  </div>
-                </div>
-
-                {/* Chain preview */}
-                {form.primary && (
-                  <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
-                    <span className="text-[11px] text-muted-foreground">Chain preview:</span>
-                    <Badge variant="secondary" className="font-medium">{form.primary}</Badge>
-                    {form.fallback1 && form.fallback1 !== '__none__' && (
-                      <>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                        <Badge variant="outline">{form.fallback1}</Badge>
-                      </>
-                    )}
-                    {form.fallback2 && form.fallback2 !== '__none__' && (
-                      <>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                        <Badge variant="outline" className="text-muted-foreground">{form.fallback2}</Badge>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Failover conditions */}
-              <div className="flex flex-col gap-2">
-                <Label>Failover Conditions</Label>
-                <p className="text-[11px] text-muted-foreground -mt-1">
-                  Failover triggers when <strong>any</strong> selected condition is met.
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {FAILOVER_CONDITIONS.map(cond => {
-                    const checked = form.conditions.includes(cond.id)
-                    return (
-                      <div
-                        key={cond.id}
-                        className={cn(
-                          'flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors',
-                          checked ? 'border-primary bg-primary/5' : 'border-border hover:border-border/80'
-                        )}
-                        onClick={() => toggleCondition(cond.id)}
-                      >
-                        <Checkbox checked={checked} onCheckedChange={() => toggleCondition(cond.id)} />
-                        <span className="text-sm">{cond.label}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Threshold fields */}
-              {form.conditions.some(id => FAILOVER_CONDITIONS.find(c => c.id === id)?.hasThreshold) && (
-                <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
-                  <Label className="text-xs font-semibold uppercase tracking-wide">Threshold Configuration</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {form.conditions.map(id => {
-                      const cond = FAILOVER_CONDITIONS.find(c => c.id === id)
-                      if (!cond?.hasThreshold) return null
-                      return (
-                        <div key={id} className="flex flex-col gap-1.5">
-                          <Label className="text-xs">{cond.label}</Label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              value={form.thresholds[id] ?? cond.default}
-                              onChange={(e) => setForm(f => ({
-                                ...f,
-                                thresholds: { ...f.thresholds, [id]: parseInt(e.target.value) || 0 },
-                              }))}
-                              className="w-24"
-                            />
-                            <span className="text-xs text-muted-foreground">{cond.unit}</span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Org override + status */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label>Organization Override Policy</Label>
-                  <Select
-                    value={form.orgOverride}
-                    onValueChange={(v) => v && setForm(f => ({ ...f, orgOverride: v as 'allowed' | 'restricted' }))}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="allowed">Allow organization override</SelectItem>
-                      <SelectItem value="restricted">Platform default only</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[11px] text-muted-foreground">
-                    {form.orgOverride === 'allowed'
-                      ? 'Organizations may configure their own provider chain.'
-                      : 'Organizations must use the platform-defined chain.'}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
-                  <div>
-                    <p className="text-sm font-medium">Active</p>
-                    <p className="text-xs text-muted-foreground">Enable this rule platform-wide</p>
-                  </div>
-                  <Switch
-                    checked={form.status === 'active'}
-                    onCheckedChange={(v) => setForm(f => ({ ...f, status: v ? 'active' : 'inactive' }))}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-              <Button onClick={handleSave} disabled={!form.primary}>
-                {isEditing ? 'Save Changes' : 'Save Rule'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+    <div className="grid gap-5 py-2">
+      {/* Service Type */}
+      <div className="flex flex-col gap-1.5">
+        <Label>Service Type</Label>
+        <Select
+          value={form.service}
+          onValueChange={(v) => v && handleServiceChange(v as 'LLM' | 'STT' | 'TTS')}
+          disabled={isEditing}
+        >
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="LLM">LLM (Large Language Model)</SelectItem>
+            <SelectItem value="STT">STT (Speech-to-Text)</SelectItem>
+            <SelectItem value="TTS">TTS (Text-to-Speech)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">
+          Providers shown below are filtered to this service type.
+        </p>
       </div>
 
-      {/* Explanatory card */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="flex items-start gap-3 py-3">
-          <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-          <div className="text-xs text-muted-foreground leading-relaxed">
-            <span className="font-medium text-foreground">Platform defaults</span> are used when an organization has not configured an override.
-            Failover automatically moves requests to the next provider when the configured failure conditions are met.
-            The <span className="font-medium">Organization Override</span> column indicates whether individual organizations may define their own chain.
-          </div>
-        </CardContent>
-      </Card>
+      {/* Provider chain */}
+      <div className="rounded-lg border border-border p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <ArrowDown className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-xs font-semibold uppercase tracking-wide">Provider Failover Chain</Label>
+        </div>
 
-      {/* Rules table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Service</TableHead>
-                <TableHead>Platform Default</TableHead>
-                <TableHead>Fallback Chain</TableHead>
-                <TableHead>Failover Conditions</TableHead>
-                <TableHead>Org Override</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rules.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                    No routing rules configured. Click "Add Routing Rule" to create one.
-                  </TableCell>
-                </TableRow>
-              )}
-              {rules.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-[10px]">{r.service}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="font-medium">{r.primary}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      {r.fallback1 && r.fallback1 !== '__none__' && (
-                        <div className="flex items-center gap-2 text-xs">
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          <Badge variant="outline" className="text-[10px]">{r.fallback1}</Badge>
-                        </div>
-                      )}
-                      {r.fallback2 && r.fallback2 !== '__none__' && (
-                        <div className="flex items-center gap-2 text-xs">
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground">{r.fallback2}</Badge>
-                        </div>
-                      )}
-                      {!r.fallback1 && !r.fallback2 && (
-                        <span className="text-xs text-muted-foreground italic">No fallback configured</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1 max-w-xs">
-                        {r.conditions.map(id => {
-                        const cond = FAILOVER_CONDITIONS.find(c => c.id === id)
-                        if (!cond) return null
-                        
-                        const val = r.thresholds[id]
-                        let displayLabel: string = cond.label
-                        
-                        if (cond.hasThreshold && val !== undefined) {
-                            if (id === 'timeout') displayLabel = `Timeout > ${val}s`
-                            else if (id === 'error_rate') displayLabel = `Error > ${val}%`
-                            else if (id === 'latency') displayLabel = `Latency > ${val}ms`
-                        }
-                        
-                        return (
-                            <Badge key={id} variant="outline" className="text-[10px]">
-                            {displayLabel}
-                            </Badge>
-                        )
-                        })}
-                      {r.conditions.length === 0 && (
-                        <span className="text-xs text-muted-foreground italic">None</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {r.orgOverride === 'allowed' ? (
-                      <Badge variant="outline" className="gap-1 border-[var(--status-active)]/30 text-[var(--status-active)]">
-                        <ShieldCheck className="h-3 w-3" /> Allowed
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="gap-1 border-[var(--status-warning)]/30 text-[var(--status-warning)]">
-                        <Lock className="h-3 w-3" /> Restricted
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={r.status === 'active' ? 'border-[var(--status-active)]/30 text-[var(--status-active)]' : 'text-muted-foreground'}>
-                      {r.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => openEdit(r)}
-                        className="inline-flex items-center justify-center rounded-md h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                      >
-                        <Settings2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => deleteRule(r.id)}
-                        className="inline-flex items-center justify-center rounded-md h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                      <Switch checked={r.status === 'active'} onCheckedChange={() => toggleStatus(r.id)} />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">
+              Platform Default <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={form.primary || ''}
+              onValueChange={(v) => v && setForm(f => ({ ...f, primary: v }))}
+            >
+              <SelectTrigger><SelectValue placeholder="Select default" /></SelectTrigger>
+              <SelectContent>
+                {availableProviders.map(p => (
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">Primary provider</p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Fallback 1</Label>
+            <Select
+              value={form.fallback1 || ''}
+              onValueChange={(v) => setForm(f => ({ ...f, fallback1: v === '__none__' ? undefined : v || undefined }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Optional" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— None —</SelectItem>
+                {availableProviders.filter(p => p !== form.primary).map(p => (
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">Second try</p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Fallback 2</Label>
+            <Select
+              value={form.fallback2 || ''}
+              onValueChange={(v) => setForm(f => ({ ...f, fallback2: v === '__none__' ? undefined : v || undefined }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Optional" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— None —</SelectItem>
+                {availableProviders.filter(p => p !== form.primary && p !== form.fallback1).map(p => (
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">Final fallback</p>
+          </div>
+        </div>
+
+        {/* Chain preview */}
+        {form.primary && (
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
+            <span className="text-[11px] text-muted-foreground">Chain preview:</span>
+            <Badge variant="secondary" className="font-medium">{form.primary}</Badge>
+            {form.fallback1 && (
+              <>
+                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                <Badge variant="outline">{form.fallback1}</Badge>
+              </>
+            )}
+            {form.fallback2 && (
+              <>
+                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                <Badge variant="outline" className="text-muted-foreground">{form.fallback2}</Badge>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Failover conditions */}
+      <div className="flex flex-col gap-2">
+        <Label>Failover Conditions</Label>
+        <p className="text-[11px] text-muted-foreground -mt-1">
+          Failover triggers when <strong>any</strong> selected condition is met.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {FAILOVER_CONDITIONS.map(cond => {
+            const checked = form.conditions.includes(cond.id)
+            return (
+              <div
+                key={cond.id}
+                className={cn(
+                  'flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors',
+                  checked ? 'border-primary bg-primary/5' : 'border-border hover:border-border/80'
+                )}
+                onClick={() => toggleCondition(cond.id)}
+              >
+                <Checkbox checked={checked} onCheckedChange={() => toggleCondition(cond.id)} />
+                <span className="text-sm">{cond.label}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Threshold fields */}
+      {form.conditions.some(id => FAILOVER_CONDITIONS.find(c => c.id === id)?.hasThreshold) && (
+        <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+          <Label className="text-xs font-semibold uppercase tracking-wide">Threshold Configuration</Label>
+          <div className="grid grid-cols-2 gap-4">
+            {form.conditions.map(id => {
+              const cond = FAILOVER_CONDITIONS.find(c => c.id === id)
+              if (!cond?.hasThreshold) return null
+              return (
+                <div key={id} className="flex flex-col gap-1.5">
+                  <Label className="text-xs">{cond.label}</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={form.thresholds[id] ?? cond.default}
+                      onChange={(e) => setForm(f => ({
+                        ...f,
+                        thresholds: { ...f.thresholds, [id]: parseInt(e.target.value) || 0 },
+                      }))}
+                      className="w-24"
+                    />
+                    <span className="text-xs text-muted-foreground">{cond.unit}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Org override + status */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Label>Organization Override Policy</Label>
+          <Select
+            value={form.orgOverride}
+            onValueChange={(v) => v && setForm(f => ({ ...f, orgOverride: v as 'allowed' | 'restricted' }))}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="allowed">Allow organization override</SelectItem>
+              <SelectItem value="restricted">Platform default only</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">
+            {form.orgOverride === 'allowed'
+              ? 'Organizations may configure their own provider chain.'
+              : 'Organizations must use the platform-defined chain.'}
+          </p>
+        </div>
+        <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
+          <div>
+            <p className="text-sm font-medium">Active</p>
+            <p className="text-xs text-muted-foreground">Enable this rule platform-wide</p>
+          </div>
+          <Switch
+            checked={form.status === 'active'}
+            onCheckedChange={(v) => setForm(f => ({ ...f, status: v ? 'active' : 'inactive' }))}
+          />
+        </div>
+      </div>
     </div>
+
+    <DialogFooter>
+      <Button variant="outline" onClick={closeDialog}>Cancel</Button>
+      <Button onClick={handleSave} disabled={!form.primary}>
+        {isEditing ? 'Save Changes' : 'Save Rule'}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+{/* Explanatory card */}
+<Card className="border-primary/20 bg-primary/5">
+  <CardContent className="flex items-start gap-3 py-3">
+    <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+    <div className="text-xs text-muted-foreground leading-relaxed">
+      <span className="font-medium text-foreground">Platform defaults</span> are used when an organization has not configured an override.
+      Failover automatically moves requests to the next provider when the configured failure conditions are met.
+      The <span className="font-medium">Organization Override</span> column indicates whether individual organizations may define their own chain.
+    </div>
+  </CardContent>
+</Card>
+
+{/* Rules table */}
+<Card>
+  <CardContent className="p-0">
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Service</TableHead>
+          <TableHead>Platform Default</TableHead>
+          <TableHead>Fallback Chain</TableHead>
+          <TableHead>Failover Conditions</TableHead>
+          <TableHead>Org Override</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rules.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+              No routing rules configured. Click "Add Routing Rule" to create one.
+            </TableCell>
+          </TableRow>
+        )}
+        {rules.map((r) => (
+          <TableRow key={r.id}>
+            <TableCell>
+              <Badge variant="outline" className="font-mono text-[10px]">{r.service}</Badge>
+            </TableCell>
+            <TableCell>
+              <Badge variant="secondary" className="font-medium">{r.primary}</Badge>
+            </TableCell>
+            <TableCell>
+              <div className="flex flex-col gap-1">
+                {r.fallback1 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                    <Badge variant="outline" className="text-[10px]">{r.fallback1}</Badge>
+                  </div>
+                )}
+                {r.fallback2 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                    <Badge variant="outline" className="text-[10px] text-muted-foreground">{r.fallback2}</Badge>
+                  </div>
+                )}
+                {!r.fallback1 && !r.fallback2 && (
+                  <span className="text-xs text-muted-foreground italic">No fallback configured</span>
+                )}
+              </div>
+            </TableCell>
+            <TableCell>
+              <div className="flex flex-wrap gap-1 max-w-xs">
+                {r.conditions.map(id => {
+                  const cond = FAILOVER_CONDITIONS.find(c => c.id === id)
+                  if (!cond) return null
+
+                  const val = r.thresholds[id]
+                  let displayLabel: string = cond.label
+
+                  if (cond.hasThreshold && val !== undefined) {
+                    if (id === 'timeout') displayLabel = `Timeout > ${val}s`
+                    else if (id === 'error_rate') displayLabel = `Error > ${val}%`
+                    else if (id === 'latency') displayLabel = `Latency > ${val}ms`
+                  }
+
+                  return (
+                    <Badge key={id} variant="outline" className="text-[10px]">
+                      {displayLabel}
+                    </Badge>
+                  )
+                })}
+                {r.conditions.length === 0 && (
+                  <span className="text-xs text-muted-foreground italic">None</span>
+                )}
+              </div>
+            </TableCell>
+            <TableCell>
+              {r.orgOverride === 'allowed' ? (
+                <Badge variant="outline" className="gap-1 border-[var(--status-active)]/30 text-[var(--status-active)]">
+                  <ShieldCheck className="h-3 w-3" /> Allowed
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="gap-1 border-[var(--status-warning)]/30 text-[var(--status-warning)]">
+                  <Lock className="h-3 w-3" /> Restricted
+                </Badge>
+              )}
+            </TableCell>
+            <TableCell>
+              <Badge variant="outline" className={r.status === 'active' ? 'border-[var(--status-active)]/30 text-[var(--status-active)]' : 'text-muted-foreground'}>
+                {r.status}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                <button
+                  onClick={() => openEdit(r)}
+                  className="inline-flex items-center justify-center rounded-md h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                >
+                  <Settings2 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => deleteRule(r.id)}
+                  className="inline-flex items-center justify-center rounded-md h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+                <Switch checked={r.status === 'active'} onCheckedChange={() => toggleStatus(r.id)} />
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </CardContent>
+</Card>
+</div>
   )
 }

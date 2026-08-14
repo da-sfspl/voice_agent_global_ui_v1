@@ -1114,3 +1114,32 @@ export const campaignSchedules: CampaignSchedule[] = [
     callsDispatchedToday: 0,
   },
 ]
+
+
+export type CampaignCall = {
+  campaign: string
+  calls: number
+  completed: number
+  failed: number
+}
+
+export type ProviderCall = {
+  provider: string
+  calls: number
+  pct: number
+}
+
+export const callsByCampaign: CampaignCall[] = [
+  { campaign: 'Q3 Sales Outreach — Enterprise', calls: 12400, completed: 10200, failed: 200 },
+  { campaign: 'Collections — August Cycle', calls: 18900, completed: 17400, failed: 320 },
+  { campaign: 'Healthcare Appointment Reminders', calls: 1200, completed: 1200, failed: 0 },
+  { campaign: 'NPS Survey — Post-Purchase', calls: 860, completed: 780, failed: 40 },
+  { campaign: 'Q2 Win-Back Campaign', calls: 12400, completed: 10200, failed: 200 },
+]
+
+export const callsByProvider: ProviderCall[] = [
+  { provider: 'VoBiz AI', calls: 32000, pct: 65 },
+  { provider: 'Grandstream SIP', calls: 12000, pct: 25 },
+  { provider: 'Twilio', calls: 4000, pct: 8 },
+  { provider: 'Vonage', calls: 1000, pct: 2 },
+]

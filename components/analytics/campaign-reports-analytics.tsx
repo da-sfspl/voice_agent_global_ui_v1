@@ -26,18 +26,28 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   draft:     { label: 'Draft',     className: 'border-border text-muted-foreground' },
 }
 
-const maxVol = Math.max(...campaignDailyVolume.map(d => d.cmp001 + d.cmp002 + d.cmp006))
-
 export function CampaignReportsAnalytics() {
   const [dateRange, setDateRange] = useState('30d')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null)
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null) 
+
+  const rangeDays = dateRange === '7d' ? 7 : dateRange === '90d' ? 90 : 30
+  const chartData = campaignDailyVolume.slice(-rangeDays)
+  const maxTotal = Math.max(...chartData.map(d => d.cmp001 + d.cmp002 + d.cmp006), 1)
+
+  // ── Evenly-spaced x-axis label indices (always include first & last) ────
+  const labelIdxs = (() => {
+    const n = chartData.length
+    const count = Math.min(5, n)
+    const s = new Set<number>()
+    for (let k = 0; k < count; k++) s.add(Math.round((k / Math.max(1, count - 1)) * (n - 1)))
+    return Array.from(s).sort((a, b) => a - b)
+  })()
 
   const filtered = campaignReports.filter(c =>
     statusFilter === 'all' || c.status === statusFilter
   )
-
-  const selected = campaignReports.find(c => c.id === selectedCampaign)
 
   const kpis = [
     { label: 'Total Campaigns',  value: campaignKpis.totalCampaigns,                    icon: Megaphone,    color: 'bg-primary/10 text-primary' },
@@ -117,19 +127,78 @@ export function CampaignReportsAnalytics() {
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-chart-3" />Win-Back</span>
           </div>
         </div>
-        <div className="flex h-40 items-end gap-0.5 overflow-hidden">
-          {campaignDailyVolume.map((d) => (
-            <div key={d.day} className="flex flex-1 flex-col items-center" style={{ height: '140px' }}>
-              <div className="flex w-full items-end gap-px" style={{ height: '130px' }}>
-                <div className="flex-1 rounded-sm bg-primary/75" style={{ height: `${(d.cmp001 / maxVol) * 100}%` }} title={`Q3 Sales: ${d.cmp001}`} />
-                <div className="flex-1 rounded-sm bg-chart-2/75" style={{ height: `${(d.cmp002 / maxVol) * 100}%` }} title={`Collections: ${d.cmp002}`} />
-                <div className="flex-1 rounded-sm bg-chart-3/75" style={{ height: `${(d.cmp006 / maxVol) * 100}%` }} title={`Win-Back: ${d.cmp006}`} />
+
+        <div className="relative">
+          {/* Stacked bars */}
+          <div className="flex h-40 gap-[2px]" onMouseLeave={() => setHoverIdx(null)}>
+            {chartData.map((d, i) => {
+              const total = d.cmp001 + d.cmp002 + d.cmp006
+              const segH = (v: number) => (total > 0 ? `${(v / total) * 100}%` : '0%')
+              return (
+                <div
+                  key={d.day}
+                  onMouseEnter={() => setHoverIdx(i)}
+                  className={cn(
+                    'flex flex-1 flex-col justify-end rounded-sm transition-colors',
+                    hoverIdx === i && 'bg-muted/60'
+                  )}
+                >
+                  <div
+                    className="flex w-full flex-col-reverse overflow-hidden rounded-t-[3px]"
+                    style={{ height: `${(total / maxTotal) * 100}%` }}
+                  >
+                    <div className="w-full bg-primary" style={{ height: segH(d.cmp001) }} />
+                    <div className="w-full bg-chart-2" style={{ height: segH(d.cmp002) }} />
+                    <div className="w-full bg-chart-3" style={{ height: segH(d.cmp006) }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Hover tooltip */}
+          {hoverIdx !== null && chartData[hoverIdx] && (() => {
+            const d = chartData[hoverIdx]
+            const total = d.cmp001 + d.cmp002 + d.cmp006
+            return (
+              <div
+                className="pointer-events-none absolute top-1 z-10 w-44 rounded-md border border-border bg-card px-3 py-2 text-xs shadow-md"
+                style={{
+                  left: `${((hoverIdx + 0.5) / chartData.length) * 100}%`,
+                  transform: hoverIdx > chartData.length / 2 ? 'translateX(-105%)' : 'translateX(8px)',
+                }}
+              >
+                <p className="mb-1.5 font-semibold">{d.day}</p>
+                <div className="space-y-1 tabular-nums">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Total</span>
+                    <span className="font-medium">{fmt(total)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="h-2 w-2 rounded-sm bg-primary" />Q3 Sales</span>
+                    <span>{fmt(d.cmp001)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="h-2 w-2 rounded-sm bg-chart-2" />Collections</span>
+                    <span>{fmt(d.cmp002)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="h-2 w-2 rounded-sm bg-chart-3" />Win-Back</span>
+                    <span>{fmt(d.cmp006)}</span>
+                  </div>
+                </div>
               </div>
+            )
+          })()}
+        </div>
+
+        {/* X-axis labels (reduced density, aligned to bars) */}
+        <div className="mt-1.5 flex gap-[2px] text-[10px] text-muted-foreground">
+          {chartData.map((d, i) => (
+            <div key={i} className="flex-1 truncate text-center">
+              {labelIdxs.includes(i) ? d.day : ''}
             </div>
           ))}
-        </div>
-        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-          <span>Jul 9</span><span>Jul 22</span><span>Aug 7</span>
         </div>
       </div>
 

@@ -6,6 +6,8 @@ import { RecentCallsTable } from '@/components/dashboard/recent-calls-table'
 import { SystemHealthWidget } from '@/components/dashboard/system-health-widget'
 import { ActiveCampaignsWidget } from '@/components/dashboard/active-campaigns-widget'
 import { LiveCallsWidget } from '@/components/dashboard/live-calls-widget'
+import { CallsByAgentChart } from '@/components/dashboard/calls-by-agents-chart'
+
 import {
   PhoneCall,
   Bot,
@@ -101,12 +103,12 @@ export default function DashboardPage() {
           />
           <StatCard
             label="LLM Cost Today"
-            value="$148.72"
-            delta="+$22 vs avg"
+            value="₹14,872"
+            delta="+'2,200 vs avg"
             deltaType="down"
             icon={TrendingUp}
             iconColor="bg-orange-100 text-orange-700"
-            subtext="Budget: $250 / day"
+            subtext="Budget: ₹25,000 / day"
           />
           <StatCard
             label="Open Alerts"
@@ -130,8 +132,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Middle row */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <AgentStatusWidget />
+          <CallsByAgentChart />
           <ActiveCampaignsWidget />
         </div>
 

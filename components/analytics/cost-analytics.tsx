@@ -14,8 +14,9 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 function fmt(n: number) { return n.toLocaleString() }
-function usd(n: number) { return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
-function usd4(n: number) { return `$${n.toFixed(4)}` }
+// function usd(n: number) { return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
+function inr(n: number) { return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
+function inr4(n: number) { return `₹${n.toFixed(4)}` }
 
 
 // ─── Cost series config ────────────────────────────────────────────────────
@@ -150,11 +151,11 @@ function StackedCostChart({ data }: { data: CostPoint[] }) {
             style={{ left: `${(xFor(hover) / VB_W) * 100}%`, transform: hover > data.length / 2 ? 'translateX(-105%)' : 'translateX(10px)' }}>
             <p className="mb-1.5 font-semibold">{hp.day}</p>
             <div className="space-y-1 tabular-nums">
-              <div className="flex items-center justify-between"><span className="text-muted-foreground">Total</span><span className="font-medium">{usd(hp.total)}</span></div>
+              <div className="flex items-center justify-between"><span className="text-muted-foreground">Total</span><span className="font-medium">{inr(hp.total)}</span></div>
               {COST_SERIES.filter(s => visible[s.key]).map(s => (
                 <div key={s.key} className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-1.5 text-muted-foreground"><span className="h-2 w-2 rounded-sm" style={{ backgroundColor: SERVICE_COLORS[s.key] }} />{s.label}</span>
-                  <span>{usd(hp.raw[s.key])}</span>
+                  <span>{inr(hp.raw[s.key])}</span>
                 </div>
               ))}
             </div>
@@ -184,7 +185,7 @@ function CostDonut({ segments, total }: { segments: { label: string; value: numb
         })}
       </svg>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xl font-bold tabular-nums">{usd(total)}</span>
+        <span className="text-xl font-bold tabular-nums">{inr(total)}</span>
         <span className="text-[11px] text-muted-foreground">Total Cost</span>
       </div>
     </div>
@@ -206,7 +207,7 @@ function ProviderCostCard({ title, color, items }: {
           <div key={p.provider}>
             <div className="flex items-center justify-between text-xs mb-1">
               <span className="truncate max-w-[200px]">{p.provider}</span>
-              <span className="font-semibold tabular-nums ml-2">{usd(p.costUsd)} ({p.pct}%)</span>
+              <span className="font-semibold tabular-nums ml-2">{inr(p.costUsd)} ({p.pct}%)</span>
             </div>
             <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
               <div className="h-full rounded-full" style={{ width: `${p.pct}%`, backgroundColor: color }} />
@@ -225,14 +226,14 @@ export function CostAnalytics() {
   const [agentFilter, setAgentFilter] = useState('all')
 
   const kpis = [
-    { label: 'Total Estimated Cost', value: usd(costKpis.totalEstimatedCost), icon: DollarSign,  color: 'bg-primary/10 text-primary',    highlight: true },
-    { label: 'LLM Cost',             value: usd(costKpis.llmCost),            icon: Brain,       color: 'bg-violet-100 text-violet-700', highlight: false },
-    { label: 'STT Cost',             value: usd(costKpis.sttCost),            icon: AudioLines,  color: 'bg-sky-100 text-sky-700',       highlight: false },
-    { label: 'TTS Cost',             value: usd(costKpis.ttsCost),            icon: Volume2,     color: 'bg-teal-100 text-teal-700',     highlight: false },
-    { label: 'Telephony Cost',       value: usd(costKpis.telephonyCost),      icon: Phone,       color: 'bg-blue-100 text-blue-700',     highlight: false },
-    { label: 'Cost per Call',        value: usd4(costKpis.costPerCall),       icon: TrendingUp,  color: 'bg-amber-100 text-amber-700',   highlight: false },
-    { label: 'Cost per Minute',      value: usd4(costKpis.costPerMinute),     icon: TrendingUp,  color: 'bg-orange-100 text-orange-700', highlight: false },
-    { label: 'Cost / Successful Call', value: usd4(costKpis.costPerSuccessfulCall), icon: DollarSign, color: 'bg-emerald-100 text-emerald-700', highlight: false },
+    { label: 'Total Estimated Cost', value: inr(costKpis.totalEstimatedCost), icon: DollarSign,  color: 'bg-primary/10 text-primary',    highlight: true },
+    { label: 'LLM Cost',             value: inr4(costKpis.llmCost),            icon: Brain,       color: 'bg-violet-100 text-violet-700', highlight: false },
+    { label: 'STT Cost',             value: inr4(costKpis.sttCost),            icon: AudioLines,  color: 'bg-sky-100 text-sky-700',       highlight: false },
+    { label: 'TTS Cost',             value: inr4(costKpis.ttsCost),            icon: Volume2,     color: 'bg-teal-100 text-teal-700',     highlight: false },
+    { label: 'Telephony Cost',       value: inr4(costKpis.telephonyCost),      icon: Phone,       color: 'bg-blue-100 text-blue-700',     highlight: false },
+    { label: 'Cost per Call',        value: inr4(costKpis.costPerCall),       icon: TrendingUp,  color: 'bg-amber-100 text-amber-700',   highlight: false },
+    { label: 'Cost per Minute',      value: inr4(costKpis.costPerMinute),     icon: TrendingUp,  color: 'bg-orange-100 text-orange-700', highlight: false },
+    { label: 'Cost / Successful Call', value: inr4(costKpis.costPerSuccessfulCall), icon: DollarSign, color: 'bg-emerald-100 text-emerald-700', highlight: false },
   ]
 
   // Service composition for the donut
@@ -327,22 +328,22 @@ export function CostAnalytics() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold">Cost Trends Over Time</h3>
-            <p className="text-xs text-muted-foreground">Daily actual cost by service (USD)</p>
+            <p className="text-xs text-muted-foreground">Daily actual cost by service (INR)</p>
           </div>
         </div>
         <StackedCostChart data={costTimeSeries} />
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
             <p className="text-[11px] text-muted-foreground">Total period cost</p>
-            <p className="text-sm font-semibold tabular-nums">{usd(periodTotal)}</p>
+            <p className="text-sm font-semibold tabular-nums">{inr(periodTotal)}</p>
           </div>
           <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
             <p className="text-[11px] text-muted-foreground">Average / day</p>
-            <p className="text-sm font-semibold tabular-nums">{usd(periodAvg)}</p>
+            <p className="text-sm font-semibold tabular-nums">{inr(periodAvg)}</p>
           </div>
           <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
             <p className="text-[11px] text-muted-foreground">Peak day</p>
-            <p className="text-sm font-semibold tabular-nums">{peakDay ? `${usd(peakDay.llm + peakDay.stt + peakDay.tts + peakDay.telephony)} · ${peakDay.day}` : '—'}</p>
+            <p className="text-sm font-semibold tabular-nums">{peakDay ? `${inr(peakDay.llm + peakDay.stt + peakDay.tts + peakDay.telephony)} · ${peakDay.day}` : '—'}</p>
           </div>
         </div>
       </div>
@@ -362,7 +363,7 @@ export function CostAnalytics() {
                 <div key={s.label} className="flex items-center gap-3 text-xs">
                   <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
                   <span className="text-foreground flex-1">{s.label}</span>
-                  <span className="text-muted-foreground tabular-nums">{usd(s.value)}</span>
+                  <span className="text-muted-foreground tabular-nums">{inr(s.value)}</span>
                   <span className="w-12 text-right font-medium tabular-nums">{p.toFixed(1)}%</span>
                 </div>
               )
@@ -390,16 +391,16 @@ export function CostAnalytics() {
             <div key={a.agent}>
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="truncate max-w-[180px] font-medium">{a.agent}</span>
-                <span className="font-semibold tabular-nums">{usd(a.totalCost)}</span>
+                <span className="font-semibold tabular-nums">{inr(a.totalCost)}</span>
               </div>
               <div className="flex h-2.5 w-full rounded-full bg-muted overflow-hidden">
                 {(['llm', 'stt', 'tts', 'telephony'] as const).map(k => a[k] > 0 && (
-                  <div key={k} style={{ width: `${(a[k] / maxAgentCost) * 100}%`, backgroundColor: SERVICE_COLORS[k] }} title={`${k}: ${usd(a[k])}`} />
+                  <div key={k} style={{ width: `${(a[k] / maxAgentCost) * 100}%`, backgroundColor: SERVICE_COLORS[k] }} title={`${k}: ${inr(a[k])}`} />
                 ))}
               </div>
               <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-0.5">
                 <span>{fmt(a.calls)} calls</span>
-                <span>{usd4(a.totalCost / (a.calls || 1))} / call</span>
+                <span>{inr4(a.totalCost / (a.calls || 1))} / call</span>
               </div>
             </div>
           ))}
@@ -418,13 +419,13 @@ export function CostAnalytics() {
               {rankedAgents.map(a => (
                 <tr key={a.agent} className="border-b border-border/50 last:border-0 hover:bg-muted/40 transition-colors">
                   <td className="py-2.5 font-medium pr-3 max-w-[160px] truncate">{a.agent}</td>
-                  <td className="py-2.5 tabular-nums font-semibold pr-3">{usd(a.totalCost)}</td>
-                  <td className="py-2.5 tabular-nums text-muted-foreground pr-3">{usd(a.llm)}</td>
-                  <td className="py-2.5 tabular-nums text-muted-foreground pr-3">{usd(a.stt)}</td>
-                  <td className="py-2.5 tabular-nums text-muted-foreground pr-3">{usd(a.tts)}</td>
-                  <td className="py-2.5 tabular-nums text-muted-foreground pr-3">{usd(a.telephony)}</td>
+                  <td className="py-2.5 tabular-nums font-semibold pr-3">{inr(a.totalCost)}</td>
+                  <td className="py-2.5 tabular-nums text-muted-foreground pr-3">{inr(a.llm)}</td>
+                  <td className="py-2.5 tabular-nums text-muted-foreground pr-3">{inr(a.stt)}</td>
+                  <td className="py-2.5 tabular-nums text-muted-foreground pr-3">{inr(a.tts)}</td>
+                  <td className="py-2.5 tabular-nums text-muted-foreground pr-3">{inr(a.telephony)}</td>
                   <td className="py-2.5 tabular-nums text-muted-foreground pr-3">{fmt(a.calls)}</td>
-                  <td className="py-2.5 tabular-nums text-muted-foreground">{usd4(a.totalCost / (a.calls || 1))}</td>
+                  <td className="py-2.5 tabular-nums text-muted-foreground">{inr4(a.totalCost / (a.calls || 1))}</td>
                 </tr>
               ))}
             </tbody>
@@ -441,14 +442,14 @@ export function CostAnalytics() {
             <div key={c.campaign}>
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="truncate max-w-[220px]">{c.campaign}</span>
-                <span className="font-semibold tabular-nums ml-2">{usd(c.totalCost)}</span>
+                <span className="font-semibold tabular-nums ml-2">{inr(c.totalCost)}</span>
               </div>
               <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
                 <div className="h-full rounded-full bg-primary/70" style={{ width: `${(c.totalCost / maxCampaignCost) * 100}%` }} />
               </div>
               <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-0.5">
                 <span>{fmt(c.calls)} calls</span>
-                <span>{usd4(c.costPerCall)} / call</span>
+                <span>{inr4(c.costPerCall)} / call</span>
               </div>
             </div>
           ))}

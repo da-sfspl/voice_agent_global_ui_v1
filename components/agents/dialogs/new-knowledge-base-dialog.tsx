@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   File, Link, Plug, Upload, Plus, FileText, Globe, Eye, EyeOff, Clock
 } from 'lucide-react'
@@ -17,6 +17,8 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 } from '@/components/ui/dialog'
+import { type KnowledgeBase } from '@/lib/data'
+import { Textarea } from '@/components/ui/textarea'
 
 // ─── API form helper ────────────────────────────────────────────────────────
 type ApiForm = {
@@ -41,30 +43,53 @@ function emptyApiForm(): ApiForm {
 type NewKnowledgeBaseDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  editing?: KnowledgeBase | null
   onSave?: (kb: { name: string; description: string }) => void
 }
 
-export function NewKnowledgeBaseDialog({ open, onOpenChange, onSave }: NewKnowledgeBaseDialogProps) {
+export function NewKnowledgeBaseDialog({
+  open,
+  onOpenChange,
+  onSave,
+  editing,
+}: NewKnowledgeBaseDialogProps) {
   const [newKbName, setNewKbName] = useState('')
   const [newKbDescription, setNewKbDescription] = useState('')
 
-  // API form state (shared with your existing logic)
   const [showApiForm, setShowApiForm] = useState(false)
   const [editingApi, setEditingApi] = useState<any>(null)
   const [apiForm, setApiForm] = useState<ApiForm>(emptyApiForm())
   const [showKey, setShowKey] = useState(false)
 
-  function resetForm() {
-    setNewKbName('')
-    setNewKbDescription('')
-    setShowApiForm(false)
-    setEditingApi(null)
-    setApiForm(emptyApiForm())
-    setShowKey(false)
-  }
+  const isEditing = !!editing
+
+  // Pre-fill / reset whenever the dialog opens or the editing KB changes
+  useEffect(() => {
+    if (open) {
+      if (editing) {
+        setNewKbName(editing.name ?? '')
+        setNewKbDescription(editing.description ?? '')
+      } else {
+        setNewKbName('')
+        setNewKbDescription('')
+      }
+      // Always reset inner form state on every open
+      setShowApiForm(false)
+      setEditingApi(null)
+      setApiForm(emptyApiForm())
+      setShowKey(false)
+    }
+  }, [open, editing])
 
   function handleOpenChange(isOpen: boolean) {
-    if (!isOpen) resetForm()
+    if (!isOpen) {
+      setNewKbName('')
+      setNewKbDescription('')
+      setShowApiForm(false)
+      setEditingApi(null)
+      setApiForm(emptyApiForm())
+      setShowKey(false)
+    }
     onOpenChange(isOpen)
   }
 
@@ -78,9 +103,11 @@ export function NewKnowledgeBaseDialog({ open, onOpenChange, onSave }: NewKnowle
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto flex flex-col">
         <DialogHeader>
-          <DialogTitle>Create New Knowledge Base</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Knowledge Base' : 'Create New Knowledge Base'}</DialogTitle>
           <DialogDescription>
-            Set up your new knowledge base by adding documents, URLs, and API sources.
+            {isEditing
+              ? 'Update documents, URLs, and API sources for this knowledge base.'
+              : 'Set up your new knowledge base by adding documents, URLs, and API sources.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -111,10 +138,10 @@ export function NewKnowledgeBaseDialog({ open, onOpenChange, onSave }: NewKnowle
           <Tabs defaultValue="new-documents" className="flex-1">
             <TabsList className="h-8">
               <TabsTrigger value="new-documents" className="text-xs gap-1.5">
-                <File className="h-3.5 w-3.5" /> Documents (0)
+                <File className="h-3.5 w-3.5" /> Documents ({isEditing ? editing.documents : 0})
               </TabsTrigger>
               <TabsTrigger value="new-urls" className="text-xs gap-1.5">
-                <Link className="h-3.5 w-3.5" /> URLs (0)
+                <Link className="h-3.5 w-3.5" /> URLs ({isEditing ? editing.urls : 0})
               </TabsTrigger>
               <TabsTrigger value="new-apis" className="text-xs gap-1.5">
                 <Plug className="h-3.5 w-3.5" /> APIs (0)
@@ -128,7 +155,11 @@ export function NewKnowledgeBaseDialog({ open, onOpenChange, onSave }: NewKnowle
               </Button>
               <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-10 text-muted-foreground">
                 <FileText className="h-8 w-8 opacity-30" />
-                <p className="text-xs">No documents added yet. Upload files to get started.</p>
+                <p className="text-xs">
+                  {isEditing && editing.documents > 0
+                    ? `${editing.documents} documents attached.`
+                    : 'No documents added yet. Upload files to get started.'}
+                </p>
               </div>
             </TabsContent>
 
@@ -141,7 +172,11 @@ export function NewKnowledgeBaseDialog({ open, onOpenChange, onSave }: NewKnowle
               </div>
               <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-10 text-muted-foreground">
                 <Globe className="h-8 w-8 opacity-30" />
-                <p className="text-xs">No URLs added yet.</p>
+                <p className="text-xs">
+                  {isEditing && editing.urls > 0
+                    ? `${editing.urls} URLs attached.`
+                    : 'No URLs added yet.'}
+                </p>
               </div>
             </TabsContent>
 
@@ -233,7 +268,7 @@ export function NewKnowledgeBaseDialog({ open, onOpenChange, onSave }: NewKnowle
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={!newKbName.trim()}>
-            Save Knowledge Base
+            {isEditing ? 'Save Changes' : 'Save Knowledge Base'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -17,7 +17,7 @@ import {
   Play, Workflow, Info, Phone, Sparkles, SlidersHorizontal, Mic,
   AudioLines, Volume2, Radio, Globe, Brain as BrainIcon, Mic2 as Mic2Icon,
   Lock, CheckCircle2, XCircle, ArrowRight, Plus, Edit, Trash2, AlertCircle,
-  Settings2 as SettingsIcon, Rocket, Eye
+  Settings2 as SettingsIcon, Rocket, Eye, Pencil, ArrowDown
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useState, useEffect } from 'react'
@@ -29,12 +29,11 @@ import {
   type ExtractionField, type PostCallAction, type GuardrailItem
 } from '@/components/agents/dialogs'
 import { NewKnowledgeBaseDialog } from '@/components/agents/dialogs/new-knowledge-base-dialog'
-import { type AgentTemplate } from '@/lib/data'
-
+import { type AgentTemplate, type KnowledgeBase } from '@/lib/data'
+import { DeterministicFlowStrip } from '@/components/agents/dialogs/deterministic-flow-dialog'
+import { type PreCallCondition } from '@/components/agents/dialogs/add-precall-action-dialog'
 // Import mock data
 import { knowledgeBases } from '@/lib/data'
-
-
 
 // ─── Wizard Steps ───────────────────────────────────────────────────────────
 const steps = [
@@ -43,15 +42,15 @@ const steps = [
   { id: 3, label: 'Instructions', icon: MessageSquareText },
   { id: 4, label: 'Providers', icon: Settings2 },
   { id: 5, label: 'Voice', icon: Mic2 },
-  { id: 6, label: 'Memory', icon: Brain },
-  { id: 7, label: 'Knowledge', icon: BookOpen },
-  { id: 8, label: 'Tools', icon: Wrench },
-  { id: 9, label: 'Pre-Call', icon: Zap },
-  { id: 10, label: 'Rules', icon: Shield },
-  { id: 11, label: 'Guardrails', icon: ShieldAlert },
-  { id: 12, label: 'Extraction', icon: Database },
-  { id: 13, label: 'Post-Call', icon: Send },
-  { id: 14, label: 'Intelligence', icon: Layers },
+  // { id: 6, label: 'Memory', icon: Brain },
+  { id: 6, label: 'Knowledge', icon: BookOpen },
+  { id: 7, label: 'Tools', icon: Wrench },
+  { id: 8, label: 'Pre-Call', icon: Zap },
+  { id: 9, label: 'Rules', icon: Shield },
+  { id: 10, label: 'Guardrails', icon: ShieldAlert },
+  { id: 11, label: 'Extraction', icon: Database },
+  { id: 12, label: 'Post-Call', icon: Send },
+  { id: 13, label: 'Intelligence', icon: Layers },
 ]
 
 
@@ -91,6 +90,7 @@ const languages = [
   { value: 'es-ES', label: 'Spanish' },
   { value: 'fr-FR', label: 'French' },
   { value: 'de-DE', label: 'German' },
+  { value: 'multi', label: 'Multi-language' },
 ]
 
 const emotionStyles = [
@@ -119,14 +119,6 @@ function FieldRow({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-2 gap-4">{children}</div>
 }
 
-function UnsupportedBadge({ feature }: { feature: string }) {
-  return (
-    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-muted-foreground border-dashed gap-1">
-      <Info className="h-2.5 w-2.5" />
-      Not supported by {feature}
-    </Badge>
-  )
-}
 
 
 // ─── Main Wizard Component ──────────────────────────────────────────────────
@@ -137,6 +129,8 @@ export function CreateAgentWizard() {
   const [agentType, setAgentType] = useState<'inbound' | 'outbound' | 'hybrid'>('inbound')
   const [wizardMode, setWizardMode] = useState<'create' | 'preview'>('create')
 
+  const [ttsProvider, setTtsProvider] = useState('elevenlabs')
+  const [selectedVoice, setSelectedVoice] = useState('21m00Tcm4TlvDq8ikWAM')
 
    // Read template from URL on mount
   useEffect(() => {
@@ -156,7 +150,6 @@ export function CreateAgentWizard() {
       if (tpl) setAgentType(tpl.type)
     }
   }, [searchParams])
-
 
   // If a template is selected, we force the wizard to the final "Review" step (14/14)
   const isUsingTemplate = selectedTemplate !== null
@@ -226,28 +219,41 @@ export function CreateAgentWizard() {
         <div className="rounded-lg border border-border bg-card">
           
           {/* CONDITIONAL RENDERING: Template Review vs Step-by-Step */}
-{isUsingTemplate && selectedTemplateData ? (
-  <TemplateReviewView 
-    template={selectedTemplateData} 
-    mode={wizardMode}
-    onBack={() => handleTemplateSelect(null)} 
-  />
-) : (
+          {isUsingTemplate && selectedTemplateData ? (
+            <TemplateReviewView 
+              template={selectedTemplateData} 
+              mode={wizardMode}
+              onBack={() => handleTemplateSelect(null)} 
+            />
+          ) : (
             <>
               {step === 1 && <StepAgentInfo agentType={agentType} onTypeChange={setAgentType} />}
               {step === 2 && <StepTemplate selected={selectedTemplate} onSelect={handleTemplateSelect} />}
               {step === 3 && <StepPrompt />}
-              {step === 4 && <StepProviders />}
-              {step === 5 && <StepVoice />}
-              {step === 6 && <StepMemory />}
-              {step === 7 && <StepKnowledge />}
-              {step === 8 && <StepTools />}
-              {step === 9 && <StepPreCallActions />}
-              {step === 10 && <StepRules />}
-              {step === 11 && <StepGuardrails />}
-              {step === 12 && <StepDataExtraction />}
-              {step === 13 && <StepPostCallActions />}
-              {step === 14 && <StepIntelligence />}
+              {step === 4 && (
+                <StepProviders
+                  ttsProvider={ttsProvider}
+                  setTtsProvider={setTtsProvider}
+                  selectedVoice={selectedVoice}
+                  setSelectedVoice={setSelectedVoice}
+                />
+              )}
+              
+              {step === 5 && (
+                <StepVoice
+                  ttsProvider={ttsProvider}
+                  selectedVoice={selectedVoice}
+                />
+              )}             
+         {/* {step === 6 && <StepMemory />} */}
+              {step === 6 && <StepKnowledge />}
+              {step === 7 && <StepTools />}
+              {step === 8 && <StepPreCallActions />}
+              {step === 9 && <StepRules />}
+              {step === 10 && <StepGuardrails />}
+              {step === 11 && <StepDataExtraction />}
+              {step === 12 && <StepPostCallActions />}
+              {step === 13 && <StepIntelligence />}
 
               {/* Standard Nav Buttons (Only for Blank Agent) */}
               <div className="border-t border-border px-6 py-4 flex justify-between">
@@ -379,7 +385,7 @@ function TemplateReviewView({
         <ReviewCard title="Guardrails" icon={ShieldAlert}>
           <div className="flex flex-wrap gap-1 mt-1">
             {template.config.guardrails.map(g => (
-              <Badge key={g.id} variant="secondary" className="text-[10px]">{g.label}</Badge>
+              <Badge key={g.id} variant="secondary" className="text-[10px]">{g.name}</Badge>
             ))}
             {template.config.guardrails.length === 0 && <p className="text-xs text-muted-foreground">No guardrails configured</p>}
           </div>
@@ -486,6 +492,7 @@ function StepAgentInfo({ agentType, onTypeChange }: {
                 <SelectItem value="en-GB">English (UK)</SelectItem>
                 <SelectItem value="es-US">Spanish (US)</SelectItem>
                 <SelectItem value="fr-FR">French</SelectItem>
+                <SelectItem value="multi">Multi-language</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -627,7 +634,26 @@ function StepPrompt() {
 }
 
 // ─── Step 4: Providers (existing) ───────────────────────────────────────────
-function StepProviders() {
+function StepProviders({
+  ttsProvider,
+  setTtsProvider,
+  selectedVoice,
+  setSelectedVoice,
+}: {
+  ttsProvider: string
+  setTtsProvider: (provider: string) => void
+  selectedVoice: string
+  setSelectedVoice: (voice: string) => void
+}) {
+  const availableVoices = ttsProviderVoices[ttsProvider] ?? []
+
+  function handleTtsProviderChange(provider: string | null) {
+    if (!provider) return
+    setTtsProvider(provider)
+    const voices = ttsProviderVoices[provider]
+    if (voices?.length > 0) setSelectedVoice(voices[0].id)
+  }
+
   return (
     <WizardSection title="AI Provider Configuration" description="Select the LLM, STT, and TTS providers.">
       <div className="flex flex-col gap-4">
@@ -660,23 +686,13 @@ function StepProviders() {
               </Select>
             </div>
           </FieldRow>
-          <FieldRow>
-            <div className="flex flex-col gap-1.5">
-              <Label>Temperature</Label>
-              <Input type="number" defaultValue="0.4" min="0" max="1" step="0.05" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Context Window</Label>
-              <Select defaultValue="8192">
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="8192">8,192</SelectItem>
-                  <SelectItem value="16384">16,384</SelectItem>
-                  <SelectItem value="32768">32,768</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </FieldRow>
+          <div className="flex flex-col gap-1.5 max-w-xs">
+            <Label>Temperature</Label>
+            <Input type="number" defaultValue="0.4" min="0" max="1" step="0.05" />
+            <p className="text-xs text-muted-foreground">
+              Controls randomness in responses. Lower values (0-0.3) are more focused and deterministic, while higher values (0.7-1) are more creative and varied.
+            </p>
+          </div>
         </div>
 
         {/* STT */}
@@ -718,69 +734,7 @@ function StepProviders() {
           <FieldRow>
             <div className="flex flex-col gap-1.5">
               <Label>Provider</Label>
-              <Select defaultValue="elevenlabs">
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
-                  <SelectItem value="azure">Azure TTS</SelectItem>
-                  <SelectItem value="google">Google TTS</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Voice</Label>
-              <Select defaultValue="rachel">
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="rachel">Rachel</SelectItem>
-                  <SelectItem value="dorothy">Dorothy</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </FieldRow>
-        </div>
-      </div>
-    </WizardSection>
-  )
-}
-
-// ─── Step 5: Voice (existing - unchanged) ───────────────────────────────────
-function StepVoice() {
-  const [ttsProvider, setTtsProvider] = useState('elevenlabs')
-  const [selectedVoice, setSelectedVoice] = useState('21m00Tcm4TlvDq8ikWAM')
-  const [language, setLanguage] = useState('en-US')
-  const [speakingSpeed, setSpeakingSpeed] = useState(1.0)
-  const [stability, setStability] = useState(0.5)
-  const [similarityBoost, setSimilarityBoost] = useState(0.75)
-  const [fillerWords, setFillerWords] = useState('minimal')
-  const [pitch, setPitch] = useState(0)
-  const [loudness, setLoudness] = useState(0.8)
-  const [emotionStyle, setEmotionStyle] = useState('neutral')
-  const [expressiveness, setExpressiveness] = useState(0.6)
-  const [interruptHandling, setInterruptHandling] = useState(true)
-  const [silenceDetection, setSilenceDetection] = useState(true)
-  const [backgroundNoiseSuppression, setBackgroundNoiseSuppression] = useState(true)
-
-  const features = providerFeatures[ttsProvider]
-  const availableVoices = ttsProviderVoices[ttsProvider] ?? []
-
-  function handleProviderChange(provider: string | null) {
-    if (!provider) return
-    setTtsProvider(provider)
-    const voices = ttsProviderVoices[provider]
-    if (voices?.length > 0) setSelectedVoice(voices[0].id)
-  }
-
-  return (
-    <WizardSection title="Voice Profile" description="Configure how your agent sounds.">
-      <div className="flex flex-col gap-5">
-        {/* Voice Selection */}
-        <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
-          <h3 className="text-sm font-semibold">Voice Selection</h3>
-          <FieldRow>
-            <div className="flex flex-col gap-1.5">
-              <Label>TTS Provider</Label>
-              <Select value={ttsProvider} onValueChange={handleProviderChange}>
+              <Select value={ttsProvider} onValueChange={handleTtsProviderChange}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
@@ -801,6 +755,63 @@ function StepVoice() {
               </Select>
             </div>
           </FieldRow>
+        </div>
+      </div>
+    </WizardSection>
+  )
+}
+
+// ─── Step 5: Voice (existing - unchanged) ───────────────────────────────────
+function StepVoice({
+  ttsProvider,
+  selectedVoice,
+}: {
+  ttsProvider: string
+  selectedVoice: string
+}) {
+  // Local tuning state
+  const [language, setLanguage] = useState('en-US')
+  const [speakingSpeed, setSpeakingSpeed] = useState(1.0)
+  const [stability, setStability] = useState(0.5)
+  const [similarityBoost, setSimilarityBoost] = useState(0.75)
+  const [fillerWords, setFillerWords] = useState('minimal')
+  const [pitch, setPitch] = useState(0)
+  const [loudness, setLoudness] = useState(0.8)
+  const [emotionStyle, setEmotionStyle] = useState('neutral')
+  const [expressiveness, setExpressiveness] = useState(0.6)
+  const [interruptHandling, setInterruptHandling] = useState(true)
+  const [silenceDetection, setSilenceDetection] = useState(true)
+  const [backgroundNoiseSuppression, setBackgroundNoiseSuppression] = useState(true)
+
+  // Get features for the selected TTS provider (from previous step)
+  const features = providerFeatures[ttsProvider]
+
+  // Find selected voice name for display
+  const availableVoices = ttsProviderVoices[ttsProvider] ?? []
+  const selectedVoiceName = availableVoices.find(v => v.id === selectedVoice)?.name ?? 'Unknown Voice'
+
+  return (
+    <WizardSection title="Voice Profile" description="Configure how your agent sounds.">
+      <div className="flex flex-col gap-5">
+        {/* Selected Voice Info */}
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center gap-3">
+            <Volume2 className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm font-semibold">{selectedVoiceName}</p>
+              <p className="text-xs text-muted-foreground">
+                {ttsProvider === 'elevenlabs' ? 'ElevenLabs' : ttsProvider === 'azure' ? 'Azure TTS' : 'Google TTS'}
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Change the voice in the previous step (Providers).
+          </p>
+        </div>
+
+        {/* Voice Tuning */}
+        <div className="rounded-lg border border-border p-4 flex flex-col gap-4">
+          <h3 className="text-sm font-semibold">Voice Tuning</h3>
           <FieldRow>
             <div className="flex flex-col gap-1.5">
               <Label>Language</Label>
@@ -813,42 +824,34 @@ function StepVoice() {
                 </SelectContent>
               </Select>
             </div>
-          </FieldRow>
-        </div>
-
-        {/* Voice Tuning */}
-        <div className="rounded-lg border border-border p-4 flex flex-col gap-4">
-          <h3 className="text-sm font-semibold">Voice Tuning</h3>
-          <FieldRow>
             <div className="flex flex-col gap-1.5">
               <Label>Speaking Speed ({speakingSpeed.toFixed(2)}×)</Label>
               <input type="range" min="0.5" max="2.0" step="0.05" value={speakingSpeed}
                 onChange={(e) => setSpeakingSpeed(parseFloat(e.target.value))}
                 className="w-full accent-primary" />
             </div>
+          </FieldRow>
+          <FieldRow>
             <div className={cn('flex flex-col gap-1.5', !features.pitch && 'opacity-50')}>
               <Label>Pitch ({pitch} semitones)</Label>
               <input type="range" min="-12" max="12" step="1" value={pitch}
                 onChange={(e) => setPitch(parseInt(e.target.value))}
                 disabled={!features.pitch} className="w-full accent-primary" />
             </div>
-          </FieldRow>
-          <FieldRow>
             <div className={cn('flex flex-col gap-1.5', !features.stability && 'opacity-50')}>
               <Label>Stability ({(stability * 100).toFixed(0)}%)</Label>
               <input type="range" min="0" max="1" step="0.05" value={stability}
                 onChange={(e) => setStability(parseFloat(e.target.value))}
                 disabled={!features.stability} className="w-full accent-primary" />
             </div>
+          </FieldRow>
+          <FieldRow>
             <div className={cn('flex flex-col gap-1.5', !features.similarityBoost && 'opacity-50')}>
               <Label>Similarity Boost ({(similarityBoost * 100).toFixed(0)}%)</Label>
               <input type="range" min="0" max="1" step="0.05" value={similarityBoost}
                 onChange={(e) => setSimilarityBoost(parseFloat(e.target.value))}
                 disabled={!features.similarityBoost} className="w-full accent-primary" />
             </div>
-          </FieldRow>
-          <Separator />
-          <FieldRow>
             <div className="flex flex-col gap-1.5">
               <Label>Filler Words</Label>
               <Select value={fillerWords} onValueChange={(v) => v && setFillerWords(v)}>
@@ -860,18 +863,19 @@ function StepVoice() {
                 </SelectContent>
               </Select>
             </div>
-            <div className={cn('flex flex-col gap-1.5', !features.style && 'opacity-50')}>
-              <Label>Emotion / Style</Label>
-              <Select value={emotionStyle} onValueChange={(v) => v && setEmotionStyle(v)} disabled={!features.style}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {emotionStyles.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </FieldRow>
+          <Separator />
+          <div className={cn('flex flex-col gap-1.5', !features.style && 'opacity-50')}>
+            <Label>Emotion / Style</Label>
+            <Select value={emotionStyle} onValueChange={(v) => v && setEmotionStyle(v)} disabled={!features.style}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {emotionStyles.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Conversation Audio */}
@@ -898,64 +902,82 @@ function StepVoice() {
 }
 
 // ─── Step 6: Memory (NEW) ───────────────────────────────────────────────────
-function StepMemory() {
-  return (
-    <WizardSection title="Memory & Context" description="Control how the agent retains and uses conversation history.">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between rounded-lg border border-border p-4">
-          <div>
-            <p className="text-sm font-semibold">Conversation Memory</p>
-            <p className="text-xs text-muted-foreground">Remember caller preferences across sessions.</p>
-          </div>
-          <Switch defaultChecked />
-        </div>
-        <FieldRow>
-          <div className="flex flex-col gap-1.5">
-            <Label>Memory Scope</Label>
-            <Select defaultValue="workspace">
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="session">Session only</SelectItem>
-                <SelectItem value="caller">Per caller ID</SelectItem>
-                <SelectItem value="workspace">Workspace-wide</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Memory TTL (days)</Label>
-            <Select defaultValue="30">
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">7 days</SelectItem>
-                <SelectItem value="30">30 days</SelectItem>
-                <SelectItem value="90">90 days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </FieldRow>
-        <div className="flex flex-col gap-1.5">
-          <Label>Context Window Strategy</Label>
-          <Select defaultValue="sliding">
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="sliding">Sliding window</SelectItem>
-              <SelectItem value="summarize">Auto-summarize older turns</SelectItem>
-              <SelectItem value="full">Full history</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    </WizardSection>
-  )
-}
+// function StepMemory() {
+//   return (
+//     <WizardSection title="Memory & Context" description="Control how the agent retains and uses conversation history.">
+//       <div className="flex flex-col gap-4">
+//         <div className="flex items-center justify-between rounded-lg border border-border p-4">
+//           <div>
+//             <p className="text-sm font-semibold">Conversation Memory</p>
+//             <p className="text-xs text-muted-foreground">Remember caller preferences across sessions.</p>
+//           </div>
+//           <Switch defaultChecked />
+//         </div>
+//         <FieldRow>
+//           <div className="flex flex-col gap-1.5">
+//             <Label>Memory Scope</Label>
+//             <Select defaultValue="workspace">
+//               <SelectTrigger><SelectValue /></SelectTrigger>
+//               <SelectContent>
+//                 <SelectItem value="session">Session only</SelectItem>
+//                 <SelectItem value="caller">Per caller ID</SelectItem>
+//                 <SelectItem value="workspace">Workspace-wide</SelectItem>
+//               </SelectContent>
+//             </Select>
+//           </div>
+//           <div className="flex flex-col gap-1.5">
+//             <Label>Memory TTL (days)</Label>
+//             <Select defaultValue="30">
+//               <SelectTrigger><SelectValue /></SelectTrigger>
+//               <SelectContent>
+//                 <SelectItem value="7">7 days</SelectItem>
+//                 <SelectItem value="30">30 days</SelectItem>
+//                 <SelectItem value="90">90 days</SelectItem>
+//               </SelectContent>
+//             </Select>
+//           </div>
+//         </FieldRow>
+//         <div className="flex flex-col gap-1.5">
+//           <Label>Context Window Strategy</Label>
+//           <Select defaultValue="sliding">
+//             <SelectTrigger><SelectValue /></SelectTrigger>
+//             <SelectContent>
+//               <SelectItem value="sliding">Sliding window</SelectItem>
+//               <SelectItem value="summarize">Auto-summarize older turns</SelectItem>
+//               <SelectItem value="full">Full history</SelectItem>
+//             </SelectContent>
+//           </Select>
+//         </div>
+//       </div>
+//     </WizardSection>
+//   )
+// }
 
 // ─── Step 7: Knowledge (NEW) ────────────────────────────────────────────────
 function StepKnowledge() {
   const [showNewKbDialog, setShowNewKbDialog] = useState(false)
+  const [editingKb, setEditingKb] = useState<KnowledgeBase | null>(null)
   const [linkedIds, setLinkedIds] = useState<string[]>([])
 
   const linked = knowledgeBases.filter((kb) => linkedIds.includes(kb.id))
   const unlinked = knowledgeBases.filter((kb) => !linkedIds.includes(kb.id))
+
+  function openEdit(kb: KnowledgeBase) {
+    setEditingKb(kb)
+    setShowNewKbDialog(true)
+  }
+
+  function openCreate() {
+    setEditingKb(null)
+    setShowNewKbDialog(true)
+  }
+
+  function handleDialogClose(open: boolean) {
+    if (!open) {
+      setShowNewKbDialog(false)
+      setEditingKb(null)
+    }
+  }
 
   return (
     <WizardSection title="Knowledge Base" description="Attach knowledge bases for document and URL access.">
@@ -969,12 +991,25 @@ function StepKnowledge() {
         {linked.map((kb) => (
           <div key={kb.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
             <BookOpen className="h-4 w-4 text-primary shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{kb.name}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{kb.name}</p>
               <p className="text-xs text-muted-foreground">{kb.documents} docs · {kb.urls} URLs</p>
             </div>
-            <Button size="sm" variant="ghost" className="text-destructive h-7 px-2"
-              onClick={() => setLinkedIds(prev => prev.filter(id => id !== kb.id))}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 gap-1"
+              onClick={() => openEdit(kb)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="text-xs">Edit</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive h-7 px-2"
+              onClick={() => setLinkedIds(prev => prev.filter(id => id !== kb.id))}
+            >
               Detach
             </Button>
           </div>
@@ -986,24 +1021,45 @@ function StepKnowledge() {
         {unlinked.map((kb) => (
           <div key={kb.id} className="flex items-center gap-3 rounded-lg border border-dashed border-border/60 p-3 opacity-70">
             <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{kb.name}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{kb.name}</p>
               <p className="text-xs text-muted-foreground">{kb.documents} docs · {kb.urls} URLs</p>
             </div>
-            <Button size="sm" variant="outline" className="h-7 px-3 text-xs"
-              onClick={() => setLinkedIds(prev => [...prev, kb.id])}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 gap-1"
+              onClick={() => openEdit(kb)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="text-xs">Edit</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-3 text-xs"
+              onClick={() => setLinkedIds(prev => [...prev, kb.id])}
+            >
               Attach
             </Button>
           </div>
         ))}
 
-        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1"
-          onClick={() => setShowNewKbDialog(true)}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="self-start gap-1.5 mt-1"
+          onClick={openCreate}
+        >
           <BookOpen className="h-4 w-4" /> Create New Knowledge Base
         </Button>
       </div>
 
-      <NewKnowledgeBaseDialog open={showNewKbDialog} onOpenChange={setShowNewKbDialog} />
+      <NewKnowledgeBaseDialog
+        open={showNewKbDialog}
+        onOpenChange={handleDialogClose}
+        editing={editingKb}
+      />
     </WizardSection>
   )
 }
@@ -1053,136 +1109,566 @@ function StepTools() {
   )
 }
 
-// ─── Step 9: Pre-Call Actions (NEW) ─────────────────────────────────────────
+// ─── Step 9: Pre-Call Actions (IMPROVED) ────────────────────────────────────
 function StepPreCallActions() {
   const [showDialog, setShowDialog] = useState(false)
   const [editingItem, setEditingItem] = useState<PreCallAction | null>(null)
   const [actions, setActions] = useState<PreCallAction[]>([
-    { id: '1', name: 'Customer Lookup', type: 'Function', source: 'CRM API', endpoint: '/api/customers', conditions: '', timeout: 3000, failureBehavior: 'proceed-partial', required: true },
-    { id: '2', name: 'Account Status', type: 'REST API', source: 'Billing', endpoint: '/api/accounts', conditions: '', timeout: 3000, failureBehavior: 'proceed', required: true },
+    {
+      id: '1',
+      name: 'Customer Lookup',
+      required: true,
+      source: 'CRM Connection',
+      sourceType: 'CRM API',
+      lookupField: 'Phone Number',
+      callerField: 'caller.phone_e164',
+      targetField: 'phone',
+      conditions: [{ field: 'Account Type', operator: 'equals', value: 'Customer' }],
+      loadData: ['Customer name', 'Account status', 'Outstanding balance', 'Last interaction'],
+      timeout: 3000,
+      failureBehavior: 'proceed-partial'
+    },
+    {
+      id: '2',
+      name: 'Account Status',
+      required: true,
+      source: 'Billing API',
+      sourceType: 'REST API',
+      lookupField: 'Account ID',
+      callerField: 'customer.account_id',
+      targetField: 'id',
+      conditions: [],
+      loadData: ['Balance', 'Payment status', 'Due date'],
+      timeout: 2000,
+      failureBehavior: 'proceed-without'
+    },
   ])
 
   return (
-    <WizardSection title="Pre-Call Actions" description="Actions before an outbound call starts.">
-      <div className="flex flex-col gap-3">
-        {actions.map((action) => (
-          <div key={action.id} className="flex items-start gap-3 rounded-lg border border-border p-4">
-            <Zap className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold">{action.name}</span>
-                <Badge variant="outline" className="text-[10px] px-1.5">{action.type}</Badge>
+    <WizardSection title="Pre-Call Actions" description="Retrieve customer and context data before the call starts.">
+      <DeterministicFlowStrip />
+      
+      <div className="flex flex-col gap-1">
+        {actions.map((action, idx) => (
+          <div key={action.id}>
+            <div className="flex gap-3 rounded-lg border border-border p-4 bg-card">
+              {/* Execution Order */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                  {idx + 1}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">Source: {action.source}</p>
+
+              {/* Action Details */}
+              <div className="flex-1 flex flex-col gap-3">
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold">{action.name}</span>
+                      <Badge variant={action.required ? 'default' : 'outline'} className="text-[10px]">
+                        {action.required ? 'Required' : 'Optional'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {action.sourceType} · {action.source}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => { setEditingItem(action); setShowDialog(true) }}
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+
+                {/* WHEN */}
+                {action.conditions.length > 0 && (
+                  <div className="rounded border border-border/50 bg-muted/30 p-2.5 text-xs">
+                    <span className="font-semibold text-primary">WHEN</span>
+                    <div className="mt-1 space-y-1">
+                      {action.conditions.map((cond: PreCallCondition, i: number) => (
+                        <div key={i} className="flex items-center gap-2">
+                          {i > 0 && <span className="text-muted-foreground font-medium">AND</span>}
+                          <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[11px]">
+                            {cond.field} {cond.operator} {cond.value}
+                          </code>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* LOOKUP */}
+                <div className="rounded border border-border/50 bg-muted/30 p-2.5 text-xs">
+                  <span className="font-semibold text-primary">LOOKUP</span>
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
+                    <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[11px]">
+                      {action.callerField}
+                    </code>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                    <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[11px]">
+                      {action.targetField}
+                    </code>
+                  </div>
+                </div>
+
+                {/* LOAD INTO CONTEXT */}
+                <div className="rounded border border-border/50 bg-muted/30 p-2.5 text-xs">
+                  <span className="font-semibold text-primary">LOAD INTO CONTEXT</span>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {action.loadData.map((field: string, i: number) => (
+                      <Badge key={i} variant="secondary" className="text-[10px]">
+                        {field}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* IF LOOKUP FAILS */}
+                <div className="rounded border border-border/50 bg-muted/30 p-2.5 text-xs">
+                  <span className="font-semibold text-primary">IF LOOKUP FAILS</span>
+                  <div className="mt-1 text-muted-foreground">
+                    {action.failureBehavior === 'proceed-partial' && 'Proceed with partial context'}
+                    {action.failureBehavior === 'proceed-without' && 'Proceed without enrichment'}
+                    {action.failureBehavior === 'stop' && 'Stop / fail pre-call'}
+                  </div>
+                </div>
+
+                {/* Timeout */}
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>Timeout: {(action.timeout / 1000).toFixed(1)}s</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditingItem(action); setShowDialog(true) }}>
-                <Edit className="h-3.5 w-3.5" />
-              </Button>
-              <Switch defaultChecked={action.required} />
-            </div>
+
+            {/* Connector */}
+            {idx < actions.length - 1 && (
+              <div className="flex justify-center py-2">
+                <ArrowDown className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
           </div>
         ))}
-        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1"
-          onClick={() => { setEditingItem(null); setShowDialog(true) }}>
+
+        {actions.length === 0 && (
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            No pre-call actions configured
+          </div>
+        )}
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="self-start gap-1.5 mt-3"
+          onClick={() => { setEditingItem(null); setShowDialog(true) }}
+        >
           <Zap className="h-4 w-4" /> Add Pre-Call Action
         </Button>
       </div>
-      <AddPreCallActionDialog open={showDialog} onOpenChange={setShowDialog} editingItem={editingItem}
+
+      <AddPreCallActionDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        editingItem={editingItem}
         onSave={(a) => {
-          if (editingItem) setActions(prev => prev.map(x => x.id === editingItem.id ? { ...x, ...a } : x))
-          else setActions(prev => [...prev, { ...a, id: `pre-${Date.now()}` }])
-        }} />
+          if (editingItem) {
+            setActions(prev => prev.map(x => x.id === editingItem.id ? { ...x, ...a } : x))
+          } else {
+            setActions(prev => [...prev, { ...a, id: `pre-${Date.now()}` }])
+          }
+        }}
+      />
     </WizardSection>
   )
 }
 
 // ─── Step 10: Rules (NEW) ───────────────────────────────────────────────────
+// ─── Step 10: Rules (IMPROVED) ──────────────────────────────────────────────
 function StepRules() {
   const [showDialog, setShowDialog] = useState(false)
   const [editingItem, setEditingItem] = useState<RuleItem | null>(null)
+  const [testResult, setTestResult] = useState<{ ruleId: string; matched: boolean } | null>(null)
   const [rules, setRules] = useState<RuleItem[]>([
-    { id: '1', name: 'Human Request', description: '', priority: 1, conditionType: 'caller-request', conditionDetails: 'Caller requests human', actionType: 'transfer', actionConfig: 'Support Queue' },
-    { id: '2', name: 'Frustration', description: '', priority: 2, conditionType: 'frustration', conditionDetails: 'Frustration >= 2', actionType: 'transfer', actionConfig: 'Support Queue' },
+    {
+      id: '1',
+      name: 'Human Request',
+      description: 'Transfer to human when requested',
+      priority: 1,
+      enabled: true,
+      conditions: [
+        { category: 'caller-request', field: 'request_type', operator: 'equals', value: 'human' }
+      ],
+      actionType: 'transfer',
+      actionTarget: 'Support Queue'
+    },
+    {
+      id: '2',
+      name: 'Collections Escalation',
+      description: 'Escalate overdue accounts',
+      priority: 2,
+      enabled: true,
+      conditions: [
+        { category: 'crm-context', field: 'days_overdue', operator: '>=', value: '30' },
+        { category: 'crm-context', field: 'account_status', operator: 'equals', value: 'Overdue' }
+      ],
+      actionType: 'transfer',
+      actionTarget: 'Collections Supervisor'
+    },
   ])
 
+  function testRule(rule: RuleItem) {
+    // Dummy test evaluation
+    const dummyContext = {
+      days_overdue: 45,
+      account_status: 'Overdue',
+      request_type: 'human',
+    }
+
+    let matched = true
+    for (const cond of rule.conditions) {
+      const contextValue = (dummyContext as any)[cond.field]
+      if (contextValue === undefined) {
+        matched = false
+        break
+      }
+      
+      if (cond.operator === 'equals' && String(contextValue) !== cond.value) matched = false
+      if (cond.operator === '>=') {
+        const numVal = Number(contextValue)
+        const threshold = Number(cond.value)
+        if (isNaN(numVal) || isNaN(threshold) || numVal < threshold) matched = false
+      }
+    }
+
+    setTestResult({ ruleId: rule.id, matched })
+    setTimeout(() => setTestResult(null), 3000)
+  }
+
   return (
-    <WizardSection title="Rules & Policies" description="Conditions and actions that govern behavior.">
+    <WizardSection title="Rules & Policies" description="Deterministic WHEN → THEN decisions that govern agent behavior.">
       <div className="flex flex-col gap-3">
         {rules.map((rule) => (
-          <div key={rule.id} className="flex items-start gap-3 rounded-lg border border-border p-4">
-            <Shield className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold">{rule.name}</span>
-                <Badge variant="outline" className="text-[10px] px-1.5">P{rule.priority}</Badge>
+          <div key={rule.id} className="flex gap-3 rounded-lg border border-border p-4 bg-card">
+            {/* Priority */}
+            <div className="flex flex-col items-center gap-1">
+              <Badge variant="outline" className="text-xs font-semibold px-2">
+                P{rule.priority}
+              </Badge>
+            </div>
+
+            {/* Rule Details */}
+            <div className="flex-1 flex flex-col gap-3">
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold">{rule.name}</span>
+                    <Badge variant={rule.enabled ? 'default' : 'outline'} className="text-[10px]">
+                      {rule.enabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                  </div>
+                  {rule.description && (
+                    <p className="text-xs text-muted-foreground">{rule.description}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 gap-1"
+                    onClick={() => testRule(rule)}
+                  >
+                    <Play className="h-3 w-3" />
+                    <span className="text-xs">Test</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => { setEditingItem(rule); setShowDialog(true) }}
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 mt-1 text-xs">
-                <span className="text-muted-foreground">WHEN:</span>
-                <code className="bg-muted px-1.5 py-0.5 rounded font-mono">{rule.conditionDetails}</code>
-                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                <code className="bg-muted px-1.5 py-0.5 rounded font-mono">{rule.actionConfig}</code>
+
+              {/* Test Result */}
+              {testResult?.ruleId === rule.id && testResult !== null && (
+                <div className={cn(
+                  'rounded border p-2 text-xs',
+                  testResult.matched
+                    ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700'
+                    : 'border-muted bg-muted/30 text-muted-foreground'
+                )}>
+                  <div className="flex items-center gap-2">
+                    {testResult.matched ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5" />
+                    )}
+                    <span className="font-medium">
+                      {testResult.matched ? 'Condition matched' : 'Condition not matched'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* WHEN */}
+              <div className="rounded border border-border/50 bg-muted/30 p-2.5 text-xs">
+                <span className="font-semibold text-primary">WHEN</span>
+                <div className="mt-1 space-y-1">
+                  {rule.conditions.map((cond: PreCallCondition, i: number) => (
+                    <div key={i} className="flex items-center gap-2 flex-wrap">
+                      {i > 0 && <span className="text-muted-foreground font-medium">AND</span>}
+                      <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[11px]">
+                        {cond.field}
+                      </code>
+                      <span className="text-muted-foreground">{cond.operator}</span>
+                      <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[11px]">
+                        {cond.value}
+                      </code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* THEN */}
+              <div className="rounded border border-border/50 bg-muted/30 p-2.5 text-xs">
+                <span className="font-semibold text-primary">THEN</span>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-muted-foreground capitalize">{rule.actionType}</span>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                  <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[11px]">
+                    {rule.actionTarget}
+                  </code>
+                </div>
               </div>
             </div>
-            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditingItem(rule); setShowDialog(true) }}>
-              <Edit className="h-3.5 w-3.5" />
-            </Button>
           </div>
         ))}
-        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1"
-          onClick={() => { setEditingItem(null); setShowDialog(true) }}>
+
+        {rules.length === 0 && (
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            No rules configured
+          </div>
+        )}
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="self-start gap-1.5 mt-1"
+          onClick={() => { setEditingItem(null); setShowDialog(true) }}
+        >
           <Shield className="h-4 w-4" /> Add Rule
         </Button>
       </div>
-      <AddRuleDialog open={showDialog} onOpenChange={setShowDialog} editingItem={editingItem}
+
+      <AddRuleDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        editingItem={editingItem}
         onSave={(r) => {
-          if (editingItem) setRules(prev => prev.map(x => x.id === editingItem.id ? { ...x, ...r } : x))
-          else setRules(prev => [...prev, { ...r, id: `rule-${Date.now()}` }])
-        }} />
+          if (editingItem) {
+            setRules(prev => prev.map(x => x.id === editingItem.id ? { ...x, ...r } : x))
+          } else {
+            setRules(prev => [...prev, { ...r, id: `rule-${Date.now()}` }])
+          }
+        }}
+      />
     </WizardSection>
   )
 }
 
 // ─── Step 11: Guardrails (NEW) ──────────────────────────────────────────────
+// ─── Step 11: Guardrails (IMPROVED) ─────────────────────────────────────────
 function StepGuardrails() {
   const [showDialog, setShowDialog] = useState(false)
   const [editingItem, setEditingItem] = useState<GuardrailItem | null>(null)
+  const [testResult, setTestResult] = useState<{ guardrailId: string; triggered: boolean } | null>(null)
   const [guardrails, setGuardrails] = useState<GuardrailItem[]>([
-    { id: '1', label: 'Block PII', description: 'Prevent SSN/card collection', action: 'Refuse', detectionCondition: '', protectedData: '', responseBehavior: '', enabled: true },
-    { id: '2', label: 'Profanity Filter', description: 'Suppress profanity', action: 'Redact', detectionCondition: '', protectedData: '', responseBehavior: '', enabled: true },
+    {
+      id: '1',
+      name: 'PII Protection',
+      description: 'Prevent collection of sensitive personal information',
+      priority: 1,
+      enabled: true,
+      protectedData: ['SSN', 'Card number', 'Bank account'],
+      conditions: [],
+      checkBefore: true,
+      checkAfter: true,
+      action: 'block',
+      safeResponse: "I can't collect that information for security reasons. Let me help you with something else."
+    },
+    {
+      id: '2',
+      name: 'Profanity Filter',
+      description: 'Block inappropriate language',
+      priority: 2,
+      enabled: true,
+      protectedData: ['Profanity'],
+      conditions: [],
+      checkBefore: false,
+      checkAfter: true,
+      action: 'redact',
+      safeResponse: "Let's keep our conversation professional."
+    },
   ])
 
+  function testGuardrail(guardrail: GuardrailItem) {
+    // Dummy test - check if input would trigger
+    const dummyInput = "I want to give you my card number..."
+    const triggered = guardrail.protectedData.some((p: string) =>
+      dummyInput.toLowerCase().includes(p.toLowerCase())
+    )
+    setTestResult({ guardrailId: guardrail.id, triggered })
+    setTimeout(() => setTestResult(null), 3000)
+  }
+
   return (
-    <WizardSection title="Guardrails" description="Safety and compliance boundaries.">
+    <WizardSection title="Guardrails" description="Deterministic policies that protect and restrict agent behavior.">
       <div className="flex flex-col gap-3">
         {guardrails.map((g) => (
-          <div key={g.id} className="flex items-start gap-3 rounded-lg border border-border p-4">
-            <ShieldAlert className="h-4 w-4 text-[var(--status-warning)] mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium">{g.label}</p>
-                <Badge variant="outline" className="text-[10px] px-1.5">{g.action}</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">{g.description}</p>
+          <div key={g.id} className="flex gap-3 rounded-lg border border-border p-4 bg-card">
+            {/* Priority */}
+            <div className="flex flex-col items-center gap-1">
+              <Badge variant="outline" className="text-xs font-semibold px-2">
+                P{g.priority}
+              </Badge>
             </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditingItem(g); setShowDialog(true) }}>
-                <Settings2 className="h-3.5 w-3.5" />
-              </Button>
-              <Switch defaultChecked={g.enabled} />
+
+            {/* Guardrail Details */}
+            <div className="flex-1 flex flex-col gap-3">
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold">{g.name}</span>
+                    <Badge variant={g.enabled ? 'default' : 'outline'} className="text-[10px]">
+                      {g.enabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                  </div>
+                  {g.description && (
+                    <p className="text-xs text-muted-foreground">{g.description}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 gap-1"
+                    onClick={() => testGuardrail(g)}
+                  >
+                    <Play className="h-3 w-3" />
+                    <span className="text-xs">Test</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => { setEditingItem(g); setShowDialog(true) }}
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Test Result */}
+              {testResult?.guardrailId === g.id && testResult !== null &&(
+                <div className={cn(
+                  'rounded border p-2 text-xs',
+                  testResult.triggered
+                    ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700'
+                    : 'border-muted bg-muted/30 text-muted-foreground'
+                )}>
+                  <div className="flex items-center gap-2">
+                    {testResult.triggered ? (
+                      <ShieldAlert className="h-3.5 w-3.5" />
+                    ) : (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    )}
+                    <span className="font-medium">
+                      {testResult.triggered ? 'Guardrail triggered' : 'No violation detected'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Protects */}
+              <div className="rounded border border-border/50 bg-muted/30 p-2.5 text-xs">
+                <span className="font-semibold text-primary">PROTECTS</span>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {g.protectedData.map((data: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="text-[10px]">
+                      {data}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action */}
+              <div className="rounded border border-border/50 bg-muted/30 p-2.5 text-xs">
+                <span className="font-semibold text-primary">ACTION</span>
+                <div className="mt-1 capitalize text-muted-foreground">
+                  {g.action === 'block' && 'Block response'}
+                  {g.action === 'redact' && 'Redact content'}
+                  {g.action === 'replace' && 'Replace with safe response'}
+                  {g.action === 'transfer' && 'Transfer to human'}
+                  {g.action === 'end-call' && 'End call'}
+                </div>
+              </div>
+
+              {/* Checks */}
+              <div className="rounded border border-border/50 bg-muted/30 p-2.5 text-xs">
+                <span className="font-semibold text-primary">CHECKS</span>
+                <div className="mt-1 flex flex-wrap gap-2 text-muted-foreground">
+                  {g.checkBefore && <span>Pre-generation</span>}
+                  {g.checkBefore && g.checkAfter && <span>·</span>}
+                  {g.checkAfter && <span>Post-generation</span>}
+                </div>
+              </div>
+
+              {/* Safe Response Preview */}
+              {g.safeResponse && (
+                <div className="rounded border border-border/50 bg-muted/30 p-2.5 text-xs">
+                  <span className="font-semibold text-primary">SAFE RESPONSE</span>
+                  <p className="mt-1 text-muted-foreground italic">"{g.safeResponse}"</p>
+                </div>
+              )}
             </div>
           </div>
         ))}
-        <Button size="sm" variant="outline" className="self-start gap-1.5 mt-1"
-          onClick={() => { setEditingItem(null); setShowDialog(true) }}>
+
+        {guardrails.length === 0 && (
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            No guardrails configured
+          </div>
+        )}
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="self-start gap-1.5 mt-1"
+          onClick={() => { setEditingItem(null); setShowDialog(true) }}
+        >
           <ShieldAlert className="h-4 w-4" /> Add Guardrail
         </Button>
       </div>
-      <AddGuardrailDialog open={showDialog} onOpenChange={setShowDialog} editingItem={editingItem}
+
+      <AddGuardrailDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        editingItem={editingItem}
         onSave={(g) => {
-          if (editingItem) setGuardrails(prev => prev.map(x => x.id === editingItem.id ? { ...x, ...g } : x))
-          else setGuardrails(prev => [...prev, { ...g, id: `guard-${Date.now()}` }])
-        }} />
+          if (editingItem) {
+            setGuardrails(prev => prev.map(x => x.id === editingItem.id ? { ...x, ...g } : x))
+          } else {
+            setGuardrails(prev => [...prev, { ...g, id: `guard-${Date.now()}` }])
+          }
+        }}
+      />
     </WizardSection>
   )
 }

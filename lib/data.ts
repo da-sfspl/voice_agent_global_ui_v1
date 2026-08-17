@@ -398,34 +398,119 @@ export const agentTemplates: AgentTemplate[] = [
         { id: 't3', name: 'transfer_call', description: 'Transfer to human agent', type: 'Built-in' },
       ],
       rules: [
-        { id: 'r1', name: 'High Value Refund', description: '', priority: 1, conditionType: 'field', conditionDetails: 'refund_amount > 100', actionType: 'transfer', actionConfig: 'Manager Queue' },
-        { id: 'r2', name: 'Human Request', description: '', priority: 2, conditionType: 'caller-request', conditionDetails: 'Requests human', actionType: 'transfer', actionConfig: 'Support Queue' },
+        {
+          id: 'r1',
+          name: 'High Value Refund',
+          description: 'Escalate refunds above $100 to manager approval',
+          priority: 1,
+          enabled: true,
+          conditions: [
+            { category: 'crm-context', field: 'refund_amount', operator: '>', value: '100' }
+          ],
+          actionType: 'transfer',
+          actionTarget: 'Manager Queue'
+        },
+        {
+          id: 'r2',
+          name: 'Human Request',
+          description: 'Transfer to human agent when caller requests it',
+          priority: 2,
+          enabled: true,
+          conditions: [
+            { category: 'caller-request', field: 'request_type', operator: 'equals', value: 'human' }
+          ],
+          actionType: 'transfer',
+          actionTarget: 'Support Queue'
+        },
       ],
       guardrails: [
-        { id: 'g1', label: 'Block PII', description: 'Prevent SSN collection', action: 'Refuse', detectionCondition: '', protectedData: 'SSN', responseBehavior: 'apologize', enabled: true },
+        {
+          id: 'g1',
+          name: 'Block PII',
+          description: 'Prevent SSN collection',
+          priority: 1,
+          enabled: true,
+          protectedData: ['SSN'],
+          conditions: [],
+          checkBefore: true,
+          checkAfter: true,
+          action: 'block',
+          safeResponse: "I'm sorry, I can't collect that information for security reasons."
+        },
       ],
-      intelligence: { useFlow: true, flowId: 'customer-support', sentiment: true, intent: true, summarization: true },
-    }
-  },
-  {
-    id: 'tpl-002',
-    name: 'Outbound Sales Qualifier',
-    category: 'Sales',
-    description: 'Lead qualification script with BANT framework, objection handling, and CRM sync.',
-    type: 'outbound',
-    llmModel: 'claude-3.5-sonnet',
-    voice: 'Aria',
-    language: 'en-US',
-    useCount: 28,
-    tags: ['sales', 'outreach'],
-    config: {
-      instructions: { role: 'Sales Qualification Agent', objective: 'Qualify leads using BANT framework and book demos.', behavior: 'Be energetic, persuasive, and respectful of time.', tone: 'professional-friendly', constraints: 'Never promise specific pricing without a formal quote.', welcome: 'Hi, this is Alex calling from Acme Corp. Am I speaking with {{customer_name}}?', fallback: 'Sorry, the connection was a bit unclear. Could you repeat that?' },
-      providers: { llmProvider: 'anthropic', llmModel: 'claude-3.5-sonnet', sttProvider: 'deepgram', ttsProvider: 'azure', temperature: 0.5, contextWindow: '32768' },
-      voice: { speed: 1.05, stability: 0.5, similarityBoost: 0.7, emotion: 'energetic', interruptHandling: true, silenceDetection: true },
-      memory: { enabled: true, scope: 'caller', ttlDays: 30 },
-      tools: [{ id: 't1', name: 'check_crm', description: 'Check CRM status', type: 'REST API' }, { id: 't2', name: 'book_demo', description: 'Book calendar demo', type: 'REST API' }],
-      rules: [{ id: 'r1', name: 'Not Interested', description: '', priority: 1, conditionType: 'intent', conditionDetails: 'Not interested', actionType: 'end', actionConfig: '' }],
-      guardrails: [{ id: 'g1', label: 'Competitor Mention', description: 'Handle competitor mentions gracefully', action: 'Redact', detectionCondition: '', protectedData: '', responseBehavior: 'clarify', enabled: true }],
+        intelligence: { useFlow: true, flowId: 'customer-support', sentiment: true, intent: true, summarization: true },
+      }
+    },
+    {
+      id: 'tpl-002',
+      name: 'Outbound Sales Qualifier',
+      category: 'Sales',
+      description: 'Lead qualification script with BANT framework, objection handling, and CRM sync.',
+      type: 'outbound',
+      llmModel: 'claude-3.5-sonnet',
+      voice: 'Aria',
+      language: 'en-US',
+      useCount: 28,
+      tags: ['sales', 'outreach'],
+      config: {
+        instructions: { role: 'Sales Qualification Agent', objective: 'Qualify leads using BANT framework and book demos.', behavior: 'Be energetic, persuasive, and respectful of time.', tone: 'professional-friendly', constraints: 'Never promise specific pricing without a formal quote.', welcome: 'Hi, this is Alex calling from Acme Corp. Am I speaking with {{customer_name}}?', fallback: 'Sorry, the connection was a bit unclear. Could you repeat that?' },
+        providers: { llmProvider: 'anthropic', llmModel: 'claude-3.5-sonnet', sttProvider: 'deepgram', ttsProvider: 'azure', temperature: 0.5, contextWindow: '32768' },
+        voice: { speed: 1.05, stability: 0.5, similarityBoost: 0.7, emotion: 'energetic', interruptHandling: true, silenceDetection: true },
+        memory: { enabled: true, scope: 'caller', ttlDays: 30 },
+        tools: [{ id: 't1', name: 'check_crm', description: 'Check CRM status', type: 'REST API' }, { id: 't2', name: 'book_demo', description: 'Book calendar demo', type: 'REST API' }],
+  rules: [
+    {
+      id: 'r1',
+      name: 'Not Interested',
+      description: 'End call gracefully when caller is not interested',
+      priority: 1,
+      enabled: true,
+      conditions: [
+        { category: 'caller-request', field: 'intent', operator: 'equals', value: 'not_interested' }
+      ],
+      actionType: 'end-call',
+      actionTarget: ''
+    },
+    {
+      id: 'r2',
+      name: 'Repeated Decline',
+      description: 'Stop outreach after 2 consecutive declines',
+      priority: 2,
+      enabled: true,
+      conditions: [
+        { category: 'conversation-state', field: 'decline_count', operator: '>=', value: '2' }
+      ],
+      actionType: 'end-call',
+      actionTarget: ''
+    },
+    {
+      id: 'r3',
+      name: 'Do Not Call Request',
+      description: 'Flag contact for DNC list when caller requests it',
+      priority: 3,
+      enabled: true,
+      conditions: [
+        { category: 'caller-request', field: 'intent', operator: 'equals', value: 'do_not_call' }
+      ],
+      actionType: 'flag',
+      actionTarget: 'DNC List'
+    },
+  ],
+    guardrails: [
+      {
+        id: 'g1',
+        name: 'Admin Access',                
+        description: 'Block admin requests',
+        priority: 1,                          
+        enabled: true,
+        protectedData: ['Admin passwords', 'Root credentials'], 
+        conditions: [],                       
+        checkBefore: true,                  
+        checkAfter: false,                    
+        action: 'block',                     
+        safeResponse: "I cannot assist with administrative access requests. Please contact the IT security team." // ← changed from responseBehavior
+      }
+    ],
       intelligence: { useFlow: true, flowId: 'lead-qualification', sentiment: true, intent: true, summarization: true },
     }
   },
@@ -446,23 +531,453 @@ export const agentTemplates: AgentTemplate[] = [
       voice: { speed: 0.95, stability: 0.8, similarityBoost: 0.9, emotion: 'empathetic', interruptHandling: false, silenceDetection: true },
       memory: { enabled: true, scope: 'caller', ttlDays: 365 },
       tools: [{ id: 't1', name: 'check_availability', description: 'Check doctor availability', type: 'REST API' }, { id: 't2', name: 'book_appointment', description: 'Book appointment', type: 'REST API' }],
-      rules: [{ id: 'r1', name: 'Medical Question', description: '', priority: 1, conditionType: 'intent', conditionDetails: 'Asks medical advice', actionType: 'transfer', actionConfig: 'Nurse Triage' }],
-      guardrails: [{ id: 'g1', label: 'HIPAA Compliance', description: 'Block PHI disclosure', action: 'Refuse', detectionCondition: '', protectedData: 'PHI, diagnoses', responseBehavior: 'escalate', enabled: true }],
-      intelligence: { useFlow: true, flowId: 'appointment-booking', sentiment: false, intent: true, summarization: true },
+
+  rules: [
+    {
+      id: 'r1',
+      name: 'Medical Question',
+      description: 'Transfer to nurse triage when caller asks for medical advice',
+      priority: 1,
+      enabled: true,
+      conditions: [
+        { category: 'caller-request', field: 'intent', operator: 'equals', value: 'medical_advice' }
+      ],
+      actionType: 'transfer',
+      actionTarget: 'Nurse Triage'
+    },
+    {
+      id: 'r2',
+      name: 'Emergency Detection',
+      description: 'Escalate immediately when emergency symptoms are mentioned',
+      priority: 2,
+      enabled: true,
+      conditions: [
+        { category: 'caller-request', field: 'intent', operator: 'equals', value: 'emergency' }
+      ],
+      actionType: 'transfer',
+      actionTarget: 'Emergency Line'
+    },
+    {
+      id: 'r3',
+      name: 'Prescription Refill',
+      description: 'Route prescription requests to pharmacy queue',
+      priority: 3,
+      enabled: true,
+      conditions: [
+        { category: 'caller-request', field: 'intent', operator: 'equals', value: 'prescription_refill' }
+      ],
+      actionType: 'transfer',
+      actionTarget: 'Pharmacy Queue'
+    },
+  ],
+    guardrails: [
+    {
+      id: 'g1',
+      name: 'HIPAA Compliance',
+      description: 'Block PHI disclosure',
+      priority: 1,
+      enabled: true,
+      protectedData: ['PHI', 'Diagnoses'],
+      conditions: [],
+      checkBefore: true,
+      checkAfter: true,
+      action: 'block',
+      safeResponse: "I'll transfer you to a specialist who can assist with that request."
+    },
+  ],
+        intelligence: { useFlow: true, flowId: 'appointment-booking', sentiment: false, intent: true, summarization: true },
+      }
+    },
+    {
+      id: 'tpl-004',
+      name: 'Collections & Payment Reminder',
+      category: 'Finance',
+      description: 'Compliant outbound collections agent with payment plan negotiation flows.',
+      type: 'outbound',
+      llmModel: 'gpt-4o',
+      voice: 'James',
+      language: 'en-US',
+      useCount: 11,
+      tags: ['collections', 'finance'],
+      config: {
+        instructions: {
+          role: 'Collections Agent',
+          objective: 'Secure payment commitments.',
+          behavior: 'Be firm but polite. Follow FDCPA guidelines strictly.',
+          tone: 'professional-formal',
+          constraints: 'Never use threatening language. Do not call before 8 AM or after 9 PM.',
+          welcome: 'Hello, this is Alex from Acme Financial. May I speak with {{customer_name}}?',
+          fallback: 'Could you please repeat that?'
+        },
+        providers: {
+          llmProvider: 'openai',
+          llmModel: 'gpt-4o',
+          sttProvider: 'deepgram',
+          ttsProvider: 'elevenlabs',
+          temperature: 0.2,
+          contextWindow: '8192'
+        },
+        voice: {
+          speed: 1.0,
+          stability: 0.7,
+          similarityBoost: 0.8,
+          emotion: 'neutral',
+          interruptHandling: true,
+          silenceDetection: true
+        },
+        memory: { enabled: true, scope: 'caller', ttlDays: 90 },
+        tools: [
+          { id: 't1', name: 'get_balance', description: 'Get account balance', type: 'REST API' },
+          { id: 't2', name: 'process_payment', description: 'Process payment', type: 'REST API' }
+        ],
+        rules: [
+          {
+            id: 'r1',
+            name: 'Dispute',
+            description: 'Transfer to compliance when caller disputes the debt',
+            priority: 1,
+            enabled: true,
+            conditions: [
+              { category: 'caller-request', field: 'intent', operator: 'equals', value: 'dispute' }
+            ],
+            actionType: 'transfer',
+            actionTarget: 'Compliance Queue'
+          },
+          {
+            id: 'r2',
+            name: 'Payment Plan Request',
+            description: 'Offer structured payment plan when caller requests it',
+            priority: 2,
+            enabled: true,
+            conditions: [
+              { category: 'caller-request', field: 'intent', operator: 'equals', value: 'payment_plan' },
+              { category: 'crm-context', field: 'days_overdue', operator: '>=', value: '30' }
+            ],
+            actionType: 'flag',
+            actionTarget: 'Payment Plan Flow'
+          },
+          {
+            id: 'r3',
+            name: 'Call Time Restriction',
+            description: 'End call if outside permitted calling hours',
+            priority: 3,
+            enabled: true,
+            conditions: [
+              { category: 'system-policy', field: 'current_hour', operator: '>=', value: '21' }
+            ],
+            actionType: 'end-call',
+            actionTarget: ''
+          }
+        ],
+      guardrails: [
+        {
+          id: 'g1',
+          name: 'FDCPA Compliance',
+          description: 'Block threatening or harassing language per FDCPA guidelines',
+          priority: 1,
+          enabled: true,
+          protectedData: ['Threatening language', 'Harassment', 'Misrepresentation'],
+          conditions: [],
+          checkBefore: true,
+          checkAfter: true,
+          action: 'block',
+          safeResponse: "I apologize. Let me rephrase that. How can I help you resolve this account today?"
+        },
+        {
+          id: 'g2',
+          name: 'Calling Hours Enforcement',
+          description: 'Prevent agent from making calls outside 8AM-9PM window',
+          priority: 2,
+          enabled: true,
+          protectedData: ['Off-hours calling'],
+          conditions: [],
+          checkBefore: true,
+          checkAfter: false,
+          action: 'block',
+          safeResponse: "I'm sorry, I'm unable to make calls at this time. Please try again between 8 AM and 9 PM."
+        },
+        {
+          id: 'g3',
+          name: 'Debt Disclosure Protection',
+          description: 'Prevent disclosure of debt details to unauthorized third parties',
+          priority: 3,
+          enabled: true,
+          protectedData: ['Debt amount', 'Account details', 'Personal information'],
+          conditions: [],
+          checkBefore: true,
+          checkAfter: true,
+          action: 'block',
+          safeResponse: "I'm sorry, I can only discuss account details with the account holder. May I speak with them directly?"
+        }
+      ],
+      intelligence: { useFlow: true, flowId: 'payment-collection', sentiment: true, intent: true, summarization: true }
     }
   },
   {
-    id: 'tpl-004', name: 'Collections & Payment Reminder', category: 'Finance', description: 'Compliant outbound collections agent with payment plan negotiation flows.', type: 'outbound', llmModel: 'gpt-4o', voice: 'James', language: 'en-US', useCount: 11, tags: ['collections', 'finance'],
-    config: { instructions: { role: 'Collections Agent', objective: 'Secure payment commitments.', behavior: 'Be firm but polite. Follow FDCPA guidelines strictly.', tone: 'professional-formal', constraints: 'Never use threatening language. Do not call before 8 AM or after 9 PM.', welcome: 'Hello, this is Alex from Acme Financial. May I speak with {{customer_name}}?', fallback: 'Could you please repeat that?' }, providers: { llmProvider: 'openai', llmModel: 'gpt-4o', sttProvider: 'deepgram', ttsProvider: 'elevenlabs', temperature: 0.2, contextWindow: '8192' }, voice: { speed: 1.0, stability: 0.7, similarityBoost: 0.8, emotion: 'neutral', interruptHandling: true, silenceDetection: true }, memory: { enabled: true, scope: 'caller', ttlDays: 90 }, tools: [{ id: 't1', name: 'get_balance', description: 'Get account balance', type: 'REST API' }, { id: 't2', name: 'process_payment', description: 'Process payment', type: 'REST API' }], rules: [{ id: 'r1', name: 'Dispute', description: '', priority: 1, conditionType: 'intent', conditionDetails: 'Disputes debt', actionType: 'transfer', actionConfig: 'Compliance Queue' }], guardrails: [{ id: 'g1', label: 'FDCPA Compliance', description: 'Block threatening language', action: 'Refuse', detectionCondition: '', protectedData: '', responseBehavior: 'escalate', enabled: true }], intelligence: { useFlow: true, flowId: 'payment-collection', sentiment: true, intent: true, summarization: true } }
+    id: 'tpl-005',
+    name: 'IT Help Desk',
+    category: 'Internal',
+    description: 'Internal IT support triage agent for common issues, resets, and ticket creation.',
+    type: 'inbound',
+    llmModel: 'claude-3-haiku',
+    voice: 'Studio-O',
+    language: 'en-US',
+    useCount: 15,
+    tags: ['it', 'internal'],
+    config: {
+      instructions: {
+        role: 'IT Help Desk Agent',
+        objective: 'Triage and resolve internal IT issues.',
+        behavior: 'Be concise, technical, and efficient.',
+        tone: 'professional-friendly',
+        constraints: 'Do not share admin passwords. Escalate network outages immediately.',
+        welcome: 'IT Help Desk, this is Alex. What issue are you experiencing?',
+        fallback: 'Could you clarify the error message you are seeing?'
+      },
+      providers: {
+        llmProvider: 'anthropic',
+        llmModel: 'claude-3-haiku',
+        sttProvider: 'deepgram',
+        ttsProvider: 'google',
+        temperature: 0.3,
+        contextWindow: '16384'
+      },
+      voice: {
+        speed: 1.1,
+        stability: 0.6,
+        similarityBoost: 0.7,
+        emotion: 'neutral',
+        interruptHandling: true,
+        silenceDetection: true
+      },
+      memory: { enabled: false, scope: 'session', ttlDays: 1 },
+      tools: [
+        { id: 't1', name: 'reset_password', description: 'Reset AD password', type: 'Built-in' },
+        { id: 't2', name: 'create_ticket', description: 'Create Jira ticket', type: 'REST API' }
+      ],
+      rules: [
+        {
+          id: 'r1',
+          name: 'Network Outage',
+          description: 'Escalate immediately when caller reports network is down',
+          priority: 1,
+          enabled: true,
+          conditions: [
+            { category: 'caller-request', field: 'intent', operator: 'equals', value: 'network_down' }
+          ],
+          actionType: 'transfer',
+          actionTarget: 'NOC Team'
+        },
+        {
+          id: 'r2',
+          name: 'Security Incident',
+          description: 'Escalate potential security breaches to security team',
+          priority: 2,
+          enabled: true,
+          conditions: [
+            { category: 'caller-request', field: 'intent', operator: 'equals', value: 'security_breach' }
+          ],
+          actionType: 'transfer',
+          actionTarget: 'Security Team'
+        },
+        {
+          id: 'r3',
+          name: 'After Hours',
+          description: 'Create ticket instead of live support during off-hours',
+          priority: 3,
+          enabled: true,
+          conditions: [
+            { category: 'system-policy', field: 'current_hour', operator: '>=', value: '18' }
+          ],
+          actionType: 'flag',
+          actionTarget: 'Create Ticket - Next Business Day'
+        }
+      ],
+      guardrails: [
+        {
+          id: 'g1',
+          name: 'Admin Access Protection',
+          description: 'Block requests for admin credentials or elevated access',
+          priority: 1,
+          enabled: true,
+          protectedData: ['Admin passwords', 'Root credentials', 'Elevated access'],
+          conditions: [],
+          checkBefore: true,
+          checkAfter: true,
+          action: 'block',
+          safeResponse: "I cannot provide admin credentials. Please submit a privileged access request through the IT portal."
+        },
+        {
+          id: 'g2',
+          name: 'Sensitive Data Protection',
+          description: 'Prevent disclosure of employee personal data',
+          priority: 2,
+          enabled: true,
+          protectedData: ['Employee SSN', 'Salary information', 'HR records'],
+          conditions: [],
+          checkBefore: true,
+          checkAfter: true,
+          action: 'block',
+          safeResponse: "I'm not able to access or share that information. Please contact HR directly."
+        },
+        {
+          id: 'g3',
+          name: 'Unauthorized Changes',
+          description: 'Block system modification commands outside approved scope',
+          priority: 3,
+          enabled: true,
+          protectedData: ['System configuration changes', 'Firewall rules', 'Network settings'],
+          conditions: [],
+          checkBefore: true,
+          checkAfter: false,
+          action: 'transfer',
+          safeResponse: "That type of change requires approval from the infrastructure team. Let me transfer you."
+        }
+      ],
+      intelligence: { useFlow: true, flowId: '', sentiment: false, intent: true, summarization: true }
+    }
   },
   {
-    id: 'tpl-005', name: 'IT Help Desk', category: 'Internal', description: 'Internal IT support triage agent for common issues, resets, and ticket creation.', type: 'inbound', llmModel: 'claude-3-haiku', voice: 'Studio-O', language: 'en-US', useCount: 15, tags: ['it', 'internal'],
-    config: { instructions: { role: 'IT Help Desk Agent', objective: 'Triage and resolve internal IT issues.', behavior: 'Be concise, technical, and efficient.', tone: 'professional-friendly', constraints: 'Do not share admin passwords. Escalate network outages immediately.', welcome: 'IT Help Desk, this is Alex. What issue are you experiencing?', fallback: 'Could you clarify the error message you are seeing?' }, providers: { llmProvider: 'anthropic', llmModel: 'claude-3-haiku', sttProvider: 'deepgram', ttsProvider: 'google', temperature: 0.3, contextWindow: '16384' }, voice: { speed: 1.1, stability: 0.6, similarityBoost: 0.7, emotion: 'neutral', interruptHandling: true, silenceDetection: true }, memory: { enabled: false, scope: 'session', ttlDays: 1 }, tools: [{ id: 't1', name: 'reset_password', description: 'Reset AD password', type: 'Built-in' }, { id: 't2', name: 'create_ticket', description: 'Create Jira ticket', type: 'REST API' }], rules: [{ id: 'r1', name: 'Network Outage', description: '', priority: 1, conditionType: 'intent', conditionDetails: 'Reports network down', actionType: 'transfer', actionConfig: 'NOC Team' }], guardrails: [{ id: 'g1', label: 'Admin Access', description: 'Block admin requests', action: 'Refuse', detectionCondition: '', protectedData: 'Admin passwords', responseBehavior: 'escalate', enabled: true }], intelligence: { useFlow: true, flowId: 'customer-support', sentiment: false, intent: true, summarization: true } }
-  },
-  {
-    id: 'tpl-006', name: 'Survey & Feedback Collector', category: 'Engagement', description: 'Post-call CSAT and NPS survey agent with branching logic and webhook export.', type: 'outbound', llmModel: 'gpt-4o-mini', voice: 'Elli', language: 'en-US', useCount: 9, tags: ['survey', 'engagement'],
-    config: { instructions: { role: 'Survey Agent', objective: 'Collect CSAT and NPS scores.', behavior: 'Be brief, polite, and appreciative of their time.', tone: 'casual', constraints: 'Do not argue with negative feedback. Just record it.', welcome: 'Hi {{customer_name}}, this is a quick follow-up from Acme Corp. Do you have 2 minutes for a quick survey?', fallback: 'Sorry, could you repeat your rating?' }, providers: { llmProvider: 'openai', llmModel: 'gpt-4o-mini', sttProvider: 'deepgram', ttsProvider: 'elevenlabs', temperature: 0.4, contextWindow: '4096' }, voice: { speed: 1.0, stability: 0.5, similarityBoost: 0.8, emotion: 'friendly', interruptHandling: false, silenceDetection: true }, memory: { enabled: false, scope: 'session', ttlDays: 1 }, tools: [{ id: 't1', name: 'save_survey', description: 'Save survey results', type: 'REST API' }], rules: [{ id: 'r1', name: 'Low Score', description: '', priority: 1, conditionType: 'field', conditionDetails: 'csat_score <= 2', actionType: 'invoke', actionConfig: 'alert_manager' }], guardrails: [], intelligence: { useFlow: false, flowId: '', sentiment: true, intent: false, summarization: true } }
-  },
+    id: 'tpl-006',
+    name: 'Survey & Feedback',
+    category: 'Customer Success',
+    description: 'Post-call survey agent for collecting CSAT and NPS scores.',
+    type: 'outbound',
+    llmModel: 'gpt-4o-mini',
+    voice: 'Rachel',
+    language: 'en-US',
+    useCount: 8,
+    tags: ['survey', 'feedback', 'csat'],
+    config: {
+      instructions: {
+        role: 'Survey Agent',
+        objective: 'Collect CSAT and NPS scores.',
+        behavior: 'Be brief, polite, and appreciative of their time.',
+        tone: 'casual',
+        constraints: 'Do not argue with negative feedback. Just record it.',
+        welcome: 'Hi {{customer_name}}, this is a quick follow-up from Acme Corp. Do you have 2 minutes for a quick survey?',
+        fallback: 'Sorry, could you repeat your rating?'
+      },
+      providers: {
+        llmProvider: 'openai',
+        llmModel: 'gpt-4o-mini',
+        sttProvider: 'deepgram',
+        ttsProvider: 'elevenlabs',
+        temperature: 0.4,
+        contextWindow: '4096'
+      },
+      voice: {
+        speed: 1.0,
+        stability: 0.5,
+        similarityBoost: 0.8,
+        emotion: 'friendly',
+        interruptHandling: false,
+        silenceDetection: true
+      },
+      memory: { enabled: false, scope: 'session', ttlDays: 1 },
+      tools: [
+        { id: 't1', name: 'save_survey', description: 'Save survey results', type: 'REST API' }
+      ],
+      rules: [
+        {
+          id: 'r1',
+          name: 'Low Score Alert',
+          description: 'Notify manager immediately when CSAT score is 2 or below',
+          priority: 1,
+          enabled: true,
+          conditions: [
+            { category: 'conversation-state', field: 'csat_score', operator: '<=', value: '2' }
+          ],
+          actionType: 'notify',
+          actionTarget: 'alert_manager'
+        },
+        {
+          id: 'r2',
+          name: 'Detractor Follow-up',
+          description: 'Flag NPS detractors (0-6) for retention team follow-up',
+          priority: 2,
+          enabled: true,
+          conditions: [
+            { category: 'conversation-state', field: 'nps_score', operator: '<=', value: '6' }
+          ],
+          actionType: 'flag',
+          actionTarget: 'Retention Team'
+        },
+        {
+          id: 'r3',
+          name: 'Survey Complete',
+          description: 'End call once all survey questions are answered',
+          priority: 3,
+          enabled: true,
+          conditions: [
+            { category: 'conversation-state', field: 'survey_complete', operator: 'equals', value: 'true' }
+          ],
+          actionType: 'end-call',
+          actionTarget: ''
+        },
+        {
+          id: 'r4',
+          name: 'Refuses Survey',
+          description: 'End call gracefully when caller declines the survey',
+          priority: 4,
+          enabled: true,
+          conditions: [
+            { category: 'caller-request', field: 'intent', operator: 'equals', value: 'decline_survey' }
+          ],
+          actionType: 'end-call',
+          actionTarget: ''
+        }
+      ],
+      guardrails: [
+        {
+          id: 'g1',
+          name: 'Feedback Integrity',
+          description: 'Never argue with, dismiss, or try to change negative customer feedback',
+          priority: 1,
+          enabled: true,
+          protectedData: ['Negative feedback', 'Complaints', 'Low ratings'],
+          conditions: [],
+          checkBefore: true,
+          checkAfter: true,
+          action: 'block',
+          safeResponse: "Thank you for your honest feedback. I've recorded it and our team will review it."
+        },
+        {
+          id: 'g2',
+          name: 'Survey Scope',
+          description: 'Keep conversation within survey questions, deflect off-topic requests',
+          priority: 2,
+          enabled: true,
+          protectedData: ['Off-topic requests', 'Support questions', 'Sales inquiries'],
+          conditions: [],
+          checkBefore: true,
+          checkAfter: false,
+          action: 'replace',
+          safeResponse: "I'm only able to help with this quick survey today. For other requests, please contact our support team."
+        },
+        {
+          id: 'g3',
+          name: 'PII Protection',
+          description: 'Do not collect unnecessary personal information during the survey',
+          priority: 3,
+          enabled: true,
+          protectedData: ['SSN', 'Payment details', 'Account credentials'],
+          conditions: [],
+          checkBefore: true,
+          checkAfter: true,
+          action: 'block',
+          safeResponse: "We don't need that information for this survey. Let's continue with the questions."
+        }
+      ],
+      intelligence: {
+        useFlow: false,
+        flowId: '',
+        sentiment: true,
+        intent: false,
+        summarization: true
+      }
+    }
+  }
 ]
 
 export type KnowledgeBase = {

@@ -36,8 +36,7 @@ import {
   Pencil,
 } from 'lucide-react'
 
-
-import { NewKnowledgeBaseDialog } from '@/components/agents/dialogs/new-knowledge-base-dialog'
+import { NewKnowledgeBaseDialog } from './dialogs/new-knowledge-base-dialog'
 
 
 const statusStyles: Record<KnowledgeBase['status'], { label: string; icon: React.ElementType; cls: string }> = {
@@ -472,3 +471,6 @@ export function KnowledgeBaseManager() {
     </div>
   )
 }
+
+
+export default NewKnowledgeBaseDialog;

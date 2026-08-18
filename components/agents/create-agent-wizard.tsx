@@ -35,6 +35,7 @@ import { type PreCallCondition } from '@/components/agents/dialogs/add-precall-a
 // Import mock data
 import { knowledgeBases } from '@/lib/data'
 
+
 // ─── Wizard Steps ───────────────────────────────────────────────────────────
 const steps = [
   { id: 1, label: 'Info', icon: Bot },
@@ -448,6 +449,10 @@ function StepAgentInfo({ agentType, onTypeChange }: {
   agentType: 'inbound' | 'outbound' | 'hybrid'
   onTypeChange: (t: 'inbound' | 'outbound' | 'hybrid') => void
 }) {
+  const [language, setLanguage] = useState('multi')
+
+  const selectedLanguage = languages.find(l => l.value === language)
+
   return (
     <WizardSection title="Agent Information" description="Define the basic details for your new agent.">
       <div className="flex flex-col gap-4">
@@ -485,14 +490,16 @@ function StepAgentInfo({ agentType, onTypeChange }: {
         <FieldRow>
           <div className="flex flex-col gap-1.5">
             <Label>Language</Label>
-            <Select defaultValue="en-US">
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={language} onValueChange={(v) => v && setLanguage(v)}>
+              <SelectTrigger>
+                <SelectValue>{selectedLanguage?.label || 'Select language'}</SelectValue>
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="en-US">English (US)</SelectItem>
-                <SelectItem value="en-GB">English (UK)</SelectItem>
-                <SelectItem value="es-US">Spanish (US)</SelectItem>
-                <SelectItem value="fr-FR">French</SelectItem>
-                <SelectItem value="multi">Multi-language</SelectItem>
+                {languages.map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -725,37 +732,43 @@ function StepProviders({
           </FieldRow>
         </div>
 
-        {/* TTS */}
-        <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <Volume2 className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">TTS (Text-to-Speech)</h3>
-          </div>
-          <FieldRow>
-            <div className="flex flex-col gap-1.5">
-              <Label>Provider</Label>
-              <Select value={ttsProvider} onValueChange={handleTtsProviderChange}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
-                  <SelectItem value="azure">Azure TTS</SelectItem>
-                  <SelectItem value="google">Google TTS</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Voice</Label>
-              <Select value={selectedVoice} onValueChange={(v) => v && setSelectedVoice(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {availableVoices.map((voice) => (
-                    <SelectItem key={voice.id} value={voice.id}>{voice.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </FieldRow>
+      {/* TTS */}
+      <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Volume2 className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold">TTS (Text-to-Speech)</h3>
         </div>
+        <FieldRow>
+          <div className="flex flex-col gap-1.5">
+            <Label>Provider</Label>
+            <Select value={ttsProvider} onValueChange={handleTtsProviderChange}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
+                <SelectItem value="azure">Azure TTS</SelectItem>
+                <SelectItem value="google">Google TTS</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Voice</Label>
+            <Select value={selectedVoice} onValueChange={(v) => v && setSelectedVoice(v)}>
+              <SelectTrigger>
+                <SelectValue>
+                  {availableVoices.find(v => v.id === selectedVoice)?.name ?? 'Select voice'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {availableVoices.map((voice) => (
+                  <SelectItem key={voice.id} value={voice.id}>
+                    {voice.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </FieldRow>
+      </div>
       </div>
     </WizardSection>
   )

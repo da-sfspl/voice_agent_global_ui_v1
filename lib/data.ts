@@ -980,24 +980,128 @@ export const agentTemplates: AgentTemplate[] = [
   }
 ]
 
+export type DocumentItem = {
+  id: string
+  name: string
+  size: string
+  type: string
+}
+
+export type UrlItem = {
+  id: string
+  url: string
+  title: string
+}
+
+export type ApiItem = {
+  id: string
+  name: string
+  endpoint: string
+  authMethod: string
+  requestMethod: string
+  syncFrequency: string
+}
+
 export type KnowledgeBase = {
   id: string
   name: string
-  description: string
+  description?: string
   documents: number
   urls: number
   apis: number
   tokens: number
-  status: 'ready' | 'processing' | 'error'
+  status: string
   lastUpdated: string
   usedByAgents: string[]
+  documentItems?: DocumentItem[]
+  urlItems?: UrlItem[]
+  apiItems?: ApiItem[]
 }
 
 export const knowledgeBases: KnowledgeBase[] = [
-  { id: 'kb-001', name: 'Product & FAQ Docs', description: 'Product documentation, FAQ articles, and support runbooks.', documents: 142, urls: 28, apis: 2, tokens: 1_240_000, status: 'ready', lastUpdated: '2026-08-05T10:30:00Z', usedByAgents: ['agt-001', 'agt-005'] },
-  { id: 'kb-002', name: 'Healthcare Policies', description: 'HIPAA guidelines, appointment policies, and care coordination protocols.', documents: 64, urls: 12, apis: 1, tokens: 580_000, status: 'ready', lastUpdated: '2026-07-22T09:00:00Z', usedByAgents: ['agt-001', 'agt-003'] },
-  { id: 'kb-003', name: 'Sales Playbook', description: 'ICP definitions, talk tracks, objection handling, and pricing sheets.', documents: 38, urls: 6, apis: 0, tokens: 310_000, status: 'ready', lastUpdated: '2026-08-01T14:00:00Z', usedByAgents: ['agt-002'] },
-  { id: 'kb-004', name: 'Compliance & Legal', description: 'Regulatory compliance documents, terms of service, and privacy policies.', documents: 22, urls: 4, apis: 0, tokens: 190_000, status: 'processing', lastUpdated: '2026-08-07T08:00:00Z', usedByAgents: [] },
+  {
+    id: 'kb-001',
+    name: 'Product & FAQ Docs',
+    description: 'Product documentation, FAQ articles, and support runbooks.',
+    documents: 142, urls: 28, apis: 2,
+    tokens: 1_240_000, status: 'ready',
+    lastUpdated: '2026-08-05T10:30:00Z',
+    usedByAgents: ['agt-001', 'agt-005'],
+    documentItems: [
+      { id: 'd-001-1', name: 'Product_Overview.pdf', size: '2.4 MB', type: 'PDF' },
+      { id: 'd-001-2', name: 'FAQ_Documentation.md', size: '156 KB', type: 'Markdown' },
+      { id: 'd-001-3', name: 'Support_Runbook.docx', size: '890 KB', type: 'Word' },
+      { id: 'd-001-4', name: 'API_Reference.pdf', size: '1.2 MB', type: 'PDF' },
+      { id: 'd-001-5', name: 'Troubleshooting_Guide.pdf', size: '3.1 MB', type: 'PDF' },
+    ],
+    urlItems: [
+      { id: 'u-001-1', url: 'https://help.acme.com/getting-started', title: 'Getting Started Guide' },
+      { id: 'u-001-2', url: 'https://docs.acme.com/api', title: 'API Documentation' },
+      { id: 'u-001-3', url: 'https://support.acme.com/troubleshooting', title: 'Troubleshooting Guide' },
+    ],
+    apiItems: [
+      { id: 'a-001-1', name: 'Customer Database', endpoint: 'https://api.acme.com/customers', authMethod: 'api-key', requestMethod: 'GET', syncFrequency: 'hourly' },
+      { id: 'a-001-2', name: 'Order System', endpoint: 'https://api.acme.com/orders', authMethod: 'bearer', requestMethod: 'GET', syncFrequency: 'realtime' },
+    ],
+  },
+  {
+    id: 'kb-002',
+    name: 'Healthcare Policies',
+    description: 'HIPAA guidelines, appointment policies, and care coordination protocols.',
+    documents: 64, urls: 12, apis: 1,
+    tokens: 580_000, status: 'ready',
+    lastUpdated: '2026-07-22T09:00:00Z',
+    usedByAgents: ['agt-001', 'agt-003'],
+    documentItems: [
+      { id: 'd-002-1', name: 'HIPAA_Compliance_Guide.pdf', size: '4.2 MB', type: 'PDF' },
+      { id: 'd-002-2', name: 'Appointment_Policies.docx', size: '320 KB', type: 'Word' },
+      { id: 'd-002-3', name: 'Care_Coordination_Protocol.pdf', size: '1.8 MB', type: 'PDF' },
+    ],
+    urlItems: [
+      { id: 'u-002-1', url: 'https://www.cms.gov/hipaa', title: 'CMS HIPAA Guidelines' },
+      { id: 'u-002-2', url: 'https://www.hhs.gov/privacy', title: 'HHS Privacy Rules' },
+    ],
+    apiItems: [
+      { id: 'a-002-1', name: 'EHR Integration', endpoint: 'https://ehr.acme.com/api/v2', authMethod: 'bearer', requestMethod: 'POST', syncFrequency: 'daily' },
+    ],
+  },
+  {
+    id: 'kb-003',
+    name: 'Sales Playbook',
+    description: 'ICP definitions, talk tracks, objection handling, and pricing sheets.',
+    documents: 38, urls: 6, apis: 0,
+    tokens: 310_000, status: 'ready',
+    lastUpdated: '2026-08-01T14:00:00Z',
+    usedByAgents: ['agt-002'],
+    documentItems: [
+      { id: 'd-003-1', name: 'ICP_Definitions.pdf', size: '540 KB', type: 'PDF' },
+      { id: 'd-003-2', name: 'Talk_Tracks_Q3.docx', size: '1.1 MB', type: 'Word' },
+      { id: 'd-003-3', name: 'Pricing_Sheets_2026.xlsx', size: '780 KB', type: 'Excel' },
+    ],
+    urlItems: [
+      { id: 'u-003-1', url: 'https://sales.acme.com/playbook', title: 'Sales Playbook Portal' },
+      { id: 'u-003-2', url: 'https://competitors.acme.com', title: 'Competitor Intelligence' },
+    ],
+    apiItems: [],
+  },
+  {
+    id: 'kb-004',
+    name: 'Compliance & Legal',
+    description: 'Regulatory compliance documents, terms of service, and privacy policies.',
+    documents: 22, urls: 4, apis: 0,
+    tokens: 190_000, status: 'processing',
+    lastUpdated: '2026-08-07T08:00:00Z',
+    usedByAgents: [],
+    documentItems: [
+      { id: 'd-004-1', name: 'Terms_of_Service.pdf', size: '680 KB', type: 'PDF' },
+      { id: 'd-004-2', name: 'Privacy_Policy.pdf', size: '420 KB', type: 'PDF' },
+      { id: 'd-004-3', name: 'GDPR_Compliance.pdf', size: '2.1 MB', type: 'PDF' },
+    ],
+    urlItems: [
+      { id: 'u-004-1', url: 'https://legal.acme.com/terms', title: 'Terms of Service' },
+    ],
+    apiItems: [],
+  },
 ]
 
 export type Prompt = {

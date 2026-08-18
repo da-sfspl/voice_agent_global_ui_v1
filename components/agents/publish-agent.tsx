@@ -61,7 +61,7 @@ export function PublishAgent({ agent }: { agent: Agent }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" render={<Link href={`/agents/${agent.id}/config`} />} className="h-8 px-2 text-muted-foreground">
+          <Button variant="ghost" size="sm" render={<Link href={`/agents/${agent.id}/config`} />} nativeButton={false} className="h-8 px-2 text-muted-foreground">
             <ChevronLeft className="h-4 w-4 mr-1" />
             Configure
           </Button>
@@ -176,7 +176,7 @@ export function PublishAgent({ agent }: { agent: Agent }) {
                 <Rocket className="h-4 w-4" />
                 Publish to {env.charAt(0).toUpperCase() + env.slice(1)}
               </Button>
-              <Button variant="outline" className="w-full" render={<Link href={`/agents/${agent.id}/config`} />}>
+              <Button variant="outline" className="w-full" render={<Link href={`/agents/${agent.id}/config`} />} nativeButton={false} >
                 Back to Configure
               </Button>
             </div>

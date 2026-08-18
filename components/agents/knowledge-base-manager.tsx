@@ -36,14 +36,8 @@ import {
   Pencil,
 } from 'lucide-react'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { NewKnowledgeBaseDialog } from './dialogs/new-knowledge-base-dialog'
+
 
 const statusStyles: Record<KnowledgeBase['status'], { label: string; icon: React.ElementType; cls: string }> = {
   ready:      { label: 'Ready',      icon: CheckCircle2, cls: 'text-[var(--status-active)]' },
@@ -465,104 +459,18 @@ export function KnowledgeBaseManager() {
         )}
       </div>
 
-      {/*  NEW DIALOG PLACEMENT (Outside the flex containers so it doesn't break layout)  */}
-      <Dialog open={showNewKbDialog} onOpenChange={setShowNewKbDialog}>
-        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Create New Knowledge Base</DialogTitle>
-            <DialogDescription>Set up your new knowledge base by adding documents, URLs, and API sources.</DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 flex flex-col gap-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">Knowledge Base Name</Label>
-                <Input placeholder="e.g. Product Documentation" value={newKbName} onChange={(e) => setNewKbName(e.target.value)} className="h-9" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">Description</Label>
-                <Input placeholder="Brief description" value={newKbDescription} onChange={(e) => setNewKbDescription(e.target.value)} className="h-9" />
-              </div>
-            </div>
-
-            <Separator />
-
-            {/*  FIX: Changed values to "new-..." to prevent Radix UI collision with main page Tabs */}
-            <Tabs defaultValue="new-documents" className="flex-1">
-              <TabsList className="h-8">
-                <TabsTrigger value="new-documents" className="text-xs gap-1.5"><File className="h-3.5 w-3.5" /> Documents (0)</TabsTrigger>
-                <TabsTrigger value="new-urls" className="text-xs gap-1.5"><Link className="h-3.5 w-3.5" /> URLs (0)</TabsTrigger>
-                <TabsTrigger value="new-apis" className="text-xs gap-1.5"><Plug className="h-3.5 w-3.5" /> APIs (0)</TabsTrigger>
-                <TabsTrigger value="new-settings" className="text-xs">Settings</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="new-documents" className="mt-4 flex flex-col gap-3">
-                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs w-fit"><Upload className="h-3.5 w-3.5" /> Upload Documents</Button>
-                <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-10 text-muted-foreground">
-                  <FileText className="h-8 w-8 opacity-30" />
-                  <p className="text-xs">No documents added yet. Upload files to get started.</p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="new-urls" className="mt-4 flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <Input placeholder="https://help.acme.com/..." className="h-8 text-xs flex-1" />
-                  <Button size="sm" className="h-8 gap-1.5 text-xs shrink-0"><Plus className="h-3.5 w-3.5" /> Add URL</Button>
-                </div>
-                <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-10 text-muted-foreground">
-                  <Globe className="h-8 w-8 opacity-30" />
-                  <p className="text-xs">No URLs added yet.</p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="new-apis" className="mt-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">Connect private database APIs.</p>
-                  <Button size="sm" className="h-8 gap-1.5 text-xs shrink-0" onClick={openAddApi}><Plus className="h-3.5 w-3.5" /> Add API Source</Button>
-                </div>
-                {showApiForm && (
-                  <div className="rounded-md border border-border bg-muted/20 p-4 flex flex-col gap-3">
-                    <p className="text-xs font-medium">{editingApi ? 'Edit API Source' : 'New API Source'}</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1.5"><Label className="text-xs">API Name</Label><Input className="h-8 text-xs" value={apiForm.name} onChange={e => setApiForm(f => ({ ...f, name: e.target.value }))} /></div>
-                      <div className="flex flex-col gap-1.5"><Label className="text-xs">Endpoint</Label><Input className="h-8 text-xs font-mono" value={apiForm.endpoint} onChange={e => setApiForm(f => ({ ...f, endpoint: e.target.value }))} /></div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" className="h-8 text-xs" onClick={saveApi}>Connect API</Button>
-                      <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setShowApiForm(false)}>Cancel</Button>
-                    </div>
-                  </div>
-                )}
-                {!showApiForm && (
-                  <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-10 text-muted-foreground">
-                    <Plug className="h-8 w-8 opacity-30" />
-                    <p className="text-xs">No API sources connected yet.</p>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="new-settings" className="mt-4">
-                <div className="grid grid-cols-2 gap-4 max-w-lg">
-                  <div className="flex flex-col gap-1.5"><Label className="text-xs">Chunk Size</Label><Input defaultValue="512" className="h-8 text-sm" /></div>
-                  <div className="flex flex-col gap-1.5"><Label className="text-xs">Overlap</Label><Input defaultValue="64" className="h-8 text-sm" /></div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewKbDialog(false)}>Cancel</Button>
-            <Button onClick={() => {
-              // Add logic here to save the new KB to your array
-              setShowNewKbDialog(false)
-              setNewKbName('')
-              setNewKbDescription('')
-            }}>
-              Save Knowledge Base
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* New Knowledge Base dialog (outside the flex containers so it doesn't break layout) */}
+      <NewKnowledgeBaseDialog
+        open={showNewKbDialog}
+        onOpenChange={setShowNewKbDialog}
+        onSave={(data) => {
+          // Add your existing create-KB logic here
+          console.log('Creating KB:', data)
+        }}
+      />
     </div>
   )
 }
+
+
+export default NewKnowledgeBaseDialog;

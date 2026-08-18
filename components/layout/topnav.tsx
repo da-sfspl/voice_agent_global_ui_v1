@@ -42,12 +42,13 @@ export function TopNav() {
         </button>
 
         {/* Settings */}
-        <Link
+        {/* <Link
           href="/admin/settings"
           className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <Settings className="h-4 w-4" />
-        </Link>
+        </Link> */}
+
 
         {/* Notifications */}
         <button className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
